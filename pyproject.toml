@@ -24,7 +24,11 @@ dependencies = [
     "httpx>=0.28.1",
     "blspy>=2.0.3",
     "numpy>=2.2.4",
-    "requests>=2.32.3"
+    "requests>=2.32.3",
+    "sphinx>=7.2.6",
+    "sphinx-autodoc-typehints>=2.0.0",
+    "myst-parser>=2.0.0",
+    "sphinx-rtd-theme>=2.0.0"
 ]
 
 [project.urls]
@@ -34,9 +38,6 @@ dependencies = [
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
-sphinx = "^7.2.6"
-sphinx-autodoc-typehints = "^2.0.0"
-myst-parser = "^2.0.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
