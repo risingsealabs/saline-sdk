@@ -14,9 +14,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # -- Apply docstrings to bindings.py ---------------------------------------
 
+# Check if the saline_sdk package is available
+try:
+    import saline_sdk
+    SALINE_SDK_AVAILABLE = True
+except ImportError:
+    SALINE_SDK_AVAILABLE = False
+    print("Warning: saline_sdk package not found. Documentation may be incomplete.")
+
 # Import the module with docstrings
 try:
     from saline_sdk.transaction.bindings_docstrings import *
+    BINDINGS_DOCSTRINGS_AVAILABLE = True
     
     # Import bindings module
     import saline_sdk.transaction.bindings as bindings
@@ -136,7 +145,9 @@ try:
         bindings.roundtrip.__doc__ = ROUNDTRIP_DOC
 
 except ImportError:
-    print("Warning: Could not import bindings_docstrings module")
+    BINDINGS_DOCSTRINGS_AVAILABLE = False
+    print("Note: bindings_docstrings module not available. API documentation will have limited details.")
+    # Continue with the documentation build, but without the enhanced docstrings
 
 # -- Project information -----------------------------------------------------
 
