@@ -1,0 +1,200 @@
+/* Custom styling for Saline SDK documentation */
+
+/* Improve note box formatting */
+div.admonition.note {
+    padding: 12px;
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+
+div.admonition.note p {
+    margin-bottom: 8px;
+    white-space: pre-line; /* Preserve line breaks in notes */
+}
+
+/* Better bullet point formatting */
+.section ul {
+    margin-left: 20px;
+    padding-left: 1em;
+    list-style-type: disc;
+    display: block;
+}
+
+.section ul li {
+    margin-bottom: 8px;
+    padding-left: 5px;
+    display: list-item;
+    width: 100%;
+}
+
+/* Field lists (parameters, returns) */
+dl.field-list {
+    display: grid;
+    grid-template-columns: 150px auto;
+    grid-gap: 10px;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+dl.field-list dt {
+    font-weight: bold;
+    text-align: right;
+    padding-right: 10px;
+}
+
+dl.field-list dd {
+    margin-left: 0;
+    padding-left: 10px;
+}
+
+/* Function signature styling */
+dl.py.function > dt,
+dl.py.method > dt {
+    font-family: monospace;
+    background-color: #f8f8f8;
+    padding: 10px;
+    border-left: 3px solid #2980b9;
+    margin-bottom: 15px;
+    word-break: break-word;
+}
+
+/* Parameter lists */
+dl.field-list > dt.field-odd,
+dl.field-list > dt.field-even {
+    background-color: #f8f8f8;
+    padding: 5px 10px;
+}
+
+/* Make parameter descriptions more readable */
+.field-body > ul.simple > li {
+    margin-bottom: 12px;
+}
+
+/* Function signatures and parameters */
+code.descname {
+    font-weight: bold;
+    color: #2980b9;
+}
+
+code.descparameter {
+    font-style: italic;
+}
+
+/* Make sure code blocks don't overflow */
+code.literal {
+    word-break: break-word;
+    white-space: pre-wrap;
+    padding: 2px 5px;
+    background-color: #f3f5f7;
+    border: 1px solid #e1e4e5;
+    border-radius: 3px;
+}
+
+/* Make long module paths wrap properly */
+code.xref {
+    word-break: break-word;
+}
+
+/* Fix pre blocks */
+pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    padding: 12px;
+    overflow-x: auto;
+}
+
+/* 
+ * Custom CSS to normalize styling for auto-generated bindings
+ */
+
+/* Normalize class signature styling */
+.class > dt {
+    display: block;
+    padding: 8px;
+    background-color: #f8f8f8;
+    border-top: solid 3px #6ab0de;
+    margin-bottom: 12px;
+}
+
+/* Make parameter sections more consistent */
+.field-list > dt, 
+dl.parameter > dt, 
+dl.type-parameter > dt,
+dl.attribute > dt {
+    display: table-cell;
+    padding: 6px;
+    background-color: #f0f0f0;
+}
+
+/* Normalize description styling */
+.field-list > dd,
+dl.parameter > dd,
+dl.type-parameter > dd,
+dl.attribute > dd {
+    display: table-cell;
+    padding: 6px 6px 6px 20px;
+}
+
+/* Improve readability for parameters */
+dl.field-list {
+    display: table;
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+/* Fix spacing in parameter tables */
+dl.field-list > dt,
+dl.field-list > dd {
+    margin-bottom: 8px;
+}
+
+/* Ensure parameter table columns don't stretch too much */
+.field-list > dt {
+    width: 25%;
+}
+
+/* Ensure code elements look the same throughout the docs */
+code.literal {
+    background-color: #f8f8f8;
+    border: 1px solid #e1e4e5;
+    padding: 2px 5px;
+    font-size: 90%;
+}
+
+/* Improve the appearance of class inheritance */
+.inheritance-diagram {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Fix method styling */
+dl.method > dt,
+dl.function > dt,
+dl.classmethod > dt,
+dl.staticmethod > dt {
+    padding: 8px;
+    background-color: #f8f8f8;
+    border-left: 3px solid #6ab0de;
+    margin-bottom: 12px;
+}
+
+/* Hide redundant staticmethod label for the binding methods */
+.staticmethod .staticmethod {
+    display: none;
+}
+
+/* Fix the type annotation display for Python 3.10+ syntax */
+.annotation {
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 90%;
+}
+
+/* Ensure consistent padding in list items */
+.rst-content .section ul li > * {
+    margin-top: 12px;
+}
+
+/* Fix potential issues with parameter descriptions */
+dl.field-list p:last-child {
+    margin-bottom: 0;
+} 

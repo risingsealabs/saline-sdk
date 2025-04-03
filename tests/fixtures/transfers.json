@@ -1,0 +1,10 @@
+{
+  "sample_transfers": [
+    {
+      "sender": "sender_public_key",
+      "recipient": "receiver_public_key",
+      "token": "USDC",
+      "amount": 100.0
+    }
+  ]
+} 

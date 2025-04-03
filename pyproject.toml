@@ -1,0 +1,43 @@
+[project]
+name = "saline-sdk"
+version = "0.1.0"
+description = "Official SDK for interacting with the Saline blockchain network"
+authors = [
+    {name = "Rising Sea Labs", email = "info@risingsealabs.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+keywords = ["blockchain", "cryptocurrency", "saline", "web3"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "mnemonic>=0.21",
+    "websockets>=14.2",
+    "bitstring>=4.3.0",
+    "aiohttp>=3.9.3",
+    "httpx>=0.28.1",
+    "blspy>=2.0.3",
+    "numpy>=2.2.4",
+    "requests>=2.32.3"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/risingsealabs/saline-sdk"
+"Bug Tracker" = "https://github.com/risingsealabs/saline-sdk/issues"
+"Documentation" = "https://saline-sdk.readthedocs.com"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+sphinx = "^7.2.6"
+sphinx-autodoc-typehints = "^2.0.0"
+myst-parser = "^2.0.0"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
