@@ -21,11 +21,11 @@ class NonEmpty[T]():
   @staticmethod
   def to_json(x):
     return x.list
-  
+
   @staticmethod
   def from_json(x):
     return NonEmpty.from_list(x)
-  
+
 
 def dumps(x):
   return json.dumps(x, separators=(',', ':'))
@@ -40,15 +40,15 @@ class Relation(Enum):
   LE = 2
   GT = 3
   GE = 4
-  
+
   @staticmethod
   def from_json(s):
     return Relation[s]
-  
+
   @staticmethod
   def to_json(x):
     return x.name
-  
+
 
 class Token(Enum):
   BTC = 0
@@ -56,70 +56,70 @@ class Token(Enum):
   USDC = 2
   USDT = 3
   SALT = 4
-  
+
   @staticmethod
   def from_json(s):
     return Token[s]
-  
+
   @staticmethod
   def to_json(x):
     return x.name
-  
+
 
 class Arithmetic(Enum):
   Add = 0
   Div = 1
   Mul = 2
   Sub = 3
-  
+
   @staticmethod
   def from_json(s):
     return Arithmetic[s]
-  
+
   @staticmethod
   def to_json(x):
     return x.name
-  
+
 
 class VariableTag(Enum):
   Address = 0
   Amount = 1
   Count = 2
   List = 3
-  
+
   @staticmethod
   def from_json(s):
     return VariableTag[s]
-  
+
   @staticmethod
   def to_json(x):
     return x.name
-  
+
 
 class Variable():
   def __init__(self, kind: VariableTag, name: str):
     super().__init__()
     self.kind = kind
     self.name = name
-  
+
   @staticmethod
   def from_json(d):
     return Variable(VariableTag.from_json(d["kind"]), d["name"])
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["kind"] = VariableTag.to_json(x.kind)
     d["name"] = x.name
     return d
-  
+
 
 # Witness types
 
 class Witness():
   def __init__(self):
     pass
-  
+
   @staticmethod
   def from_json(d):
     match d["tag"]:
@@ -129,7 +129,7 @@ class Witness():
         return AnyW.from_json(d)
       case "AutoW":
         return AutoW.from_json(d)
-  
+
   @staticmethod
   def to_json(x):
     match x:
@@ -142,60 +142,60 @@ class Witness():
       case AutoW():
         d = {"tag" : "AutoW"} | AutoW.to_json(x)
         return dict(sorted(d.items()))
-  
+
 
 class AllW(Witness):
   def __init__(self, children: list[Witness]):
     super().__init__()
     self.children = children
-  
+
   @staticmethod
   def from_json(d):
     return AllW(list(map(Witness.from_json, d["children"])))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["children"] = list(map(Witness.to_json, x.children))
     return d
-  
+
 
 class AnyW(Witness):
   def __init__(self, children: dict[uint64,Witness]):
     super().__init__()
     self.children = children
-  
+
   @staticmethod
   def from_json(d):
     return AnyW(dict(d["children"]))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["children"] = list(x.children.items())
     return d
-  
+
 
 class AutoW(Witness):
   def __init__(self):
     pass
-  
+
   @staticmethod
   def from_json(d):
     return AutoW()
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     return d
-  
+
 
 # Expr types
 
 class Expr():
   def __init__(self):
     pass
-  
+
   @staticmethod
   def from_json(d):
     match d["tag"]:
@@ -213,7 +213,7 @@ class Expr():
         return Var.from_json(d)
       case "Arithmetic2":
         return Arithmetic2.from_json(d)
-  
+
   @staticmethod
   def to_json(x):
     match x:
@@ -238,101 +238,101 @@ class Expr():
       case Arithmetic2():
         d = {"tag" : "Arithmetic2"} | Arithmetic2.to_json(x)
         return dict(sorted(d.items()))
-  
+
   def __add__(self, other):
     if (isinstance(other, int) | isinstance(other, float)):
       other = Lit(other)
     return Arithmetic2(Arithmetic.Add, self, other)
-  
+
   def __mul__(self, other):
     if (isinstance(other, int) | isinstance(other, float)):
       other = Lit(other)
     return Arithmetic2(self, Arithmetic.Mul, other)
-  
+
   def __gt__(self, other):
     if (isinstance(other, int) | isinstance(other, float)):
       other = Lit(other)
     return Restriction(self, Relation.GT, other)
-  
+
   def __lt__(self, other):
     if (isinstance(other, int) | isinstance(other, float)):
       other = Lit(other)
     return Restriction(self, Relation.LT, other)
-  
+
   def __ge__(self, other):
     if (isinstance(other, int) | isinstance(other, float)):
       other = Lit(other)
     return Restriction(self, Relation.GE, other)
-  
+
   def __le__(self, other):
     if (isinstance(other, int) | isinstance(other, float)):
       other = Lit(other)
     return Restriction(self, Relation.LE, other)
-  
+
 
 class Lit(Expr):
   def __init__(self, value: any):
     super().__init__()
     self.value = value
-  
+
   @staticmethod
   def from_json(d):
     return Lit(d["value"])
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["value"] = x.value
     return d
-  
+
 
 class Balance(Expr):
   def __init__(self, token: Token):
     super().__init__()
     self.token = token
-  
+
   @staticmethod
   def from_json(d):
     return Balance(Token.from_json(d["token"]))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["token"] = Token.to_json(x.token)
     return d
-  
+
 
 class Receive(Expr):
   def __init__(self, flow: 'Flow'):
     super().__init__()
     self.flow = flow
-  
+
   @staticmethod
   def from_json(d):
     return Receive(Flow.from_json(d["flow"]))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["flow"] = Flow.to_json(x.flow)
     return d
-  
+
 
 class Send(Expr):
   def __init__(self, flow: 'Flow'):
     super().__init__()
     self.flow = flow
-  
+
   @staticmethod
   def from_json(d):
     return Send(Flow.from_json(d["flow"]))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["flow"] = Flow.to_json(x.flow)
     return d
-  
+
 
 class Oracle(Expr):
   def __init__(self, address: G2Element, var: Variable, timestamp: int):
@@ -340,11 +340,11 @@ class Oracle(Expr):
     self.address = address
     self.var = var
     self.timestamp = timestamp
-  
+
   @staticmethod
   def from_json(d):
     return Oracle(d["address"], Variable.from_json(d["var"]), d["timestamp"])
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
@@ -352,23 +352,23 @@ class Oracle(Expr):
     d["var"] = Variable.to_json(x.var)
     d["timestamp"] = x.timestamp
     return d
-  
+
 
 class Var(Expr):
   def __init__(self, var: Variable):
     super().__init__()
     self.var = var
-  
+
   @staticmethod
   def from_json(d):
     return Var(Variable.from_json(d["var"]))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["var"] = Variable.to_json(x.var)
     return d
-  
+
 
 class Arithmetic2(Expr):
   def __init__(self, lhs: Expr, operation: Arithmetic, rhs: Expr):
@@ -376,11 +376,11 @@ class Arithmetic2(Expr):
     self.lhs = lhs
     self.operation = operation
     self.rhs = rhs
-  
+
   @staticmethod
   def from_json(d):
     return Arithmetic2(Expr.from_json(d["lhs"]), Arithmetic.from_json(d["operation"]), Expr.from_json(d["rhs"]))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
@@ -388,32 +388,32 @@ class Arithmetic2(Expr):
     d["operation"] = Arithmetic.to_json(x.operation)
     d["rhs"] = Expr.to_json(x.rhs)
     return d
-  
+
 
 class Flow():
   def __init__(self, target: Optional[Expr], token: Token):
     super().__init__()
     self.target = target
     self.token = token
-  
+
   @staticmethod
   def from_json(d):
     return Flow(None if d["target"] == None else Expr.from_json(d["target"]), Token.from_json(d["token"]))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["target"] = None if x.target == None else Expr.to_json(x.target)
     d["token"] = Token.to_json(x.token)
     return d
-  
+
 
 # Intent types
 
 class Intent():
   def __init__(self):
     pass
-  
+
   @staticmethod
   def from_json(d):
     match d["tag"]:
@@ -433,7 +433,7 @@ class Intent():
         return Rights.from_json(d)
       case "Issuance":
         return Issuance.from_json(d)
-  
+
   @staticmethod
   def to_json(x):
     match x:
@@ -461,47 +461,47 @@ class Intent():
       case Issuance():
         d = {"tag" : "Issuance"} | Issuance.to_json(x)
         return dict(sorted(d.items()))
-  
+
   def __and__(self, other):
     return All([self, other])
-  
+
   def __or__(self, other):
     return Any(1, [self, other])
-  
+
 
 class All(Intent):
   def __init__(self, children: list[Intent]):
     super().__init__()
     self.children = children
-  
+
   @staticmethod
   def from_json(d):
     return All(list(map(Intent.from_json, d["children"])))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["children"] = list(map(Intent.to_json, x.children))
     return d
-  
+
 
 class Any(Intent):
   def __init__(self, threshold: uint64, children: list[Intent]):
     super().__init__()
     self.threshold = threshold
     self.children = children
-  
+
   @staticmethod
   def from_json(d):
     return Any(d["threshold"], list(map(Intent.from_json, d["children"])))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["threshold"] = x.threshold
     d["children"] = list(map(Intent.to_json, x.children))
     return d
-  
+
 
 class Restriction(Intent):
   def __init__(self, lhs: Expr, relation: Relation, rhs: Expr):
@@ -509,11 +509,11 @@ class Restriction(Intent):
     self.lhs = lhs
     self.relation = relation
     self.rhs = rhs
-  
+
   @staticmethod
   def from_json(d):
     return Restriction(Expr.from_json(d["lhs"]), Relation.from_json(d["relation"]), Expr.from_json(d["rhs"]))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
@@ -521,25 +521,25 @@ class Restriction(Intent):
     d["relation"] = Relation.to_json(x.relation)
     d["rhs"] = Expr.to_json(x.rhs)
     return d
-  
+
 
 class Finite(Intent):
   def __init__(self, uses: uint64, inner: Intent):
     super().__init__()
     self.uses = uses
     self.inner = inner
-  
+
   @staticmethod
   def from_json(d):
     return Finite(d["uses"], Intent.from_json(d["inner"]))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["uses"] = x.uses
     d["inner"] = Intent.to_json(x.inner)
     return d
-  
+
 
 class Temporary(Intent):
   def __init__(self, duration: int, availableAfter: bool, inner: Intent):
@@ -547,11 +547,11 @@ class Temporary(Intent):
     self.duration = duration
     self.availableAfter = availableAfter
     self.inner = inner
-  
+
   @staticmethod
   def from_json(d):
     return Temporary(d["duration"], d["availableAfter"], Intent.from_json(d["inner"]))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
@@ -559,58 +559,58 @@ class Temporary(Intent):
     d["availableAfter"] = x.availableAfter
     d["inner"] = Intent.to_json(x.inner)
     return d
-  
+
 
 class Signature(Intent):
   def __init__(self, signer: G2Element):
     super().__init__()
     self.signer = signer
-  
+
   @staticmethod
   def from_json(d):
     return Signature(d["signer"])
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["signer"] = x.signer
     return d
-  
+
 
 class Rights(Intent):
   def __init__(self):
     pass
-  
+
   @staticmethod
   def from_json(d):
     return Rights()
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     return d
-  
+
 
 class Issuance(Intent):
   def __init__(self):
     pass
-  
+
   @staticmethod
   def from_json(d):
     return Issuance()
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     return d
-  
+
 
 # BridgeInstruction types
 
 class BridgeInstruction():
   def __init__(self):
     pass
-  
+
   @staticmethod
   def from_json(d):
     match d["tag"]:
@@ -618,7 +618,7 @@ class BridgeInstruction():
         return Burn.from_json(d)
       case "Mint":
         return Mint.from_json(d)
-  
+
   @staticmethod
   def to_json(x):
     match x:
@@ -628,25 +628,25 @@ class BridgeInstruction():
       case Mint():
         d = {"tag" : "Mint"} | Mint.to_json(x)
         return dict(sorted(d.items()))
-  
+
 
 class Burn(BridgeInstruction):
   def __init__(self, token: Token, amount: float64):
     super().__init__()
     self.token = token
     self.amount = amount
-  
+
   @staticmethod
   def from_json(d):
     return Burn(Token.from_json(d["token"]), d["amount"])
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["token"] = Token.to_json(x.token)
     d["amount"] = x.amount
     return d
-  
+
 
 class Mint(BridgeInstruction):
   def __init__(self, prover: G2Element, token: Token, amount: float64):
@@ -654,11 +654,11 @@ class Mint(BridgeInstruction):
     self.prover = prover
     self.token = token
     self.amount = amount
-  
+
   @staticmethod
   def from_json(d):
     return Mint(d["prover"], Token.from_json(d["token"]), d["amount"])
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
@@ -666,14 +666,14 @@ class Mint(BridgeInstruction):
     d["token"] = Token.to_json(x.token)
     d["amount"] = x.amount
     return d
-  
+
 
 # Instruction types
 
 class Instruction():
   def __init__(self):
     pass
-  
+
   @staticmethod
   def from_json(d):
     match d["tag"]:
@@ -691,7 +691,7 @@ class Instruction():
         return Delete.from_json(d)
       case "Bridge":
         return Bridge.from_json(d)
-  
+
   @staticmethod
   def to_json(x):
     match x:
@@ -716,7 +716,7 @@ class Instruction():
       case Bridge():
         d = {"tag" : "Bridge"} | Bridge.to_json(x)
         return dict(sorted(d.items()))
-  
+
 
 class Issue(Instruction):
   def __init__(self, issuer: G2Element, holder: G2Element, terms: Intent):
@@ -724,11 +724,11 @@ class Issue(Instruction):
     self.issuer = issuer
     self.holder = holder
     self.terms = terms
-  
+
   @staticmethod
   def from_json(d):
     return Issue(d["issuer"], d["holder"], Intent.from_json(d["terms"]))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
@@ -736,7 +736,7 @@ class Issue(Instruction):
     d["holder"] = x.holder
     d["terms"] = Intent.to_json(x.terms)
     return d
-  
+
 
 class TransferRights(Instruction):
   def __init__(self, seller: G2Element, buyer: G2Element, terms: Intent, issuer: G2Element):
@@ -745,11 +745,11 @@ class TransferRights(Instruction):
     self.buyer = buyer
     self.terms = terms
     self.issuer = issuer
-  
+
   @staticmethod
   def from_json(d):
     return TransferRights(d["seller"], d["buyer"], Intent.from_json(d["terms"]), d["issuer"])
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
@@ -758,7 +758,7 @@ class TransferRights(Instruction):
     d["terms"] = Intent.to_json(x.terms)
     d["issuer"] = x.issuer
     return d
-  
+
 
 class TransferFunds(Instruction):
   def __init__(self, source: G2Element, target: G2Element, funds: dict[Token,float64]):
@@ -766,11 +766,11 @@ class TransferFunds(Instruction):
     self.source = source
     self.target = target
     self.funds = funds
-  
+
   @staticmethod
   def from_json(d):
     return TransferFunds(d["source"], d["target"], dict(d["funds"]))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
@@ -778,93 +778,93 @@ class TransferFunds(Instruction):
     d["target"] = x.target
     d["funds"] = list(x.funds.items())
     return d
-  
+
 
 class OrIntent(Instruction):
   def __init__(self, host: G2Element, intent: Intent):
     super().__init__()
     self.host = host
     self.intent = intent
-  
+
   @staticmethod
   def from_json(d):
     return OrIntent(d["host"], Intent.from_json(d["intent"]))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["host"] = x.host
     d["intent"] = Intent.to_json(x.intent)
     return d
-  
+
 
 class SetIntent(Instruction):
   def __init__(self, host: G2Element, intent: Intent):
     super().__init__()
     self.host = host
     self.intent = intent
-  
+
   @staticmethod
   def from_json(d):
     return SetIntent(d["host"], Intent.from_json(d["intent"]))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["host"] = x.host
     d["intent"] = Intent.to_json(x.intent)
     return d
-  
+
 
 class Delete(Instruction):
   def __init__(self, host: G2Element):
     super().__init__()
     self.host = host
-  
+
   @staticmethod
   def from_json(d):
     return Delete(d["host"])
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["host"] = x.host
     return d
-  
+
 
 class Bridge(Instruction):
   def __init__(self, bridgedAccount: G2Element, instruction: BridgeInstruction):
     super().__init__()
     self.bridgedAccount = bridgedAccount
     self.instruction = instruction
-  
+
   @staticmethod
   def from_json(d):
     return Bridge(d["bridgedAccount"], BridgeInstruction.from_json(d["instruction"]))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["bridgedAccount"] = x.bridgedAccount
     d["instruction"] = BridgeInstruction.to_json(x.instruction)
     return d
-  
+
 
 class Transaction():
   def __init__(self, instructions: NonEmpty[Instruction]):
     super().__init__()
     self.instructions = instructions
-  
+
   @staticmethod
   def from_json(d):
     return Transaction(NonEmpty.from_list(list(map(Instruction.from_json, (d["instructions"])))))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
     d["instructions"] = list(map(Instruction.to_json, x.instructions.list))
     return d
-  
+
 
 class Signed():
   def __init__(self, nonce: uuid, signature: G1Element, signee: Transaction, signers: NonEmpty[G2Element]):
@@ -873,11 +873,11 @@ class Signed():
     self.signature = signature
     self.signee = signee
     self.signers = signers
-  
+
   @staticmethod
   def from_json(d):
     return Signed(d["nonce"], d["signature"], Transaction.from_json(d["signee"]), NonEmpty.from_list((d["signers"])))
-  
+
   @staticmethod
   def to_json(x):
     d = dict()
@@ -886,4 +886,3 @@ class Signed():
     d["signee"] = Transaction.to_json(x.signee)
     d["signers"] = x.signers.list
     return d
-  
