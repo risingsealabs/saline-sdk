@@ -151,7 +151,7 @@ try:
     if hasattr(bindings, 'loads'):
         bindings.loads.__doc__ = LOADS_DOC
     if hasattr(bindings, 'roundtrip'):
-        bindings.roundtrip.__doc__ = ROUNDTRIP_DOC
+        pass  # No docstring for roundtrip
 
 except ImportError:
     BINDINGS_DOCSTRINGS_AVAILABLE = False

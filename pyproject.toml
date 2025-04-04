@@ -39,6 +39,7 @@ dependencies = [
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
 sphinx-autobuild = "^2024.10.3"
+pytest-asyncio = "^0.26.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

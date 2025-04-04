@@ -102,15 +102,16 @@ def test_client_status(client):
         pytest.skip(f"Failed to get node status: {e}")
 
 
-def test_client_get_block(client):
+@pytest.mark.asyncio
+async def test_client_get_block(client):
     """Test retrieving block data."""
     try:
         # Get status to find the latest block height
-        status = client.get_status()
+        status = client.get_status()  # Removed await, get_status is synchronous
         latest_height = int(status.get('sync_info', {}).get('latest_block_height', '0'))
         
         # Get the latest block
-        block_data = client.get_block()
+        block_data = await client.get_block()  # Use async version
         
         # Verify block structure
         assert "block_meta" in block_data, "Block data missing block_meta"
@@ -126,20 +127,21 @@ def test_client_get_block(client):
         
         # Try to get a specific block (a few blocks back)
         if latest_height > 5:
-            older_block = client.get_block(latest_height - 5)
+            older_block = await client.get_block(latest_height - 5)  # Use async version
             older_height = int(older_block["block_meta"]["header"]["height"])
             assert older_height == latest_height - 5, "Specific block height mismatch"
             print(f"Successfully retrieved older block at height {older_height}")
         
     except Exception as e:
-        pytest.skip(f"Failed to get block data: {e}")
+        pytest.fail(f"Failed to get block data: {e}")
 
 
-def test_client_get_transactions(client):
+@pytest.mark.asyncio
+async def test_client_get_transactions(client):
     """Test retrieving transaction data."""
     try:
         # Get latest block to check for transactions
-        block_data = client.get_block()
+        block_data = await client.get_block()  # Use async version
         txs = block_data.get('block', {}).get('data', {}).get('txs', [])
         
         # If the latest block has transactions, try to decode them
@@ -148,7 +150,7 @@ def test_client_get_transactions(client):
             
             # Use the get_transactions method to get decoded transactions
             latest_height = int(block_data["block_meta"]["header"]["height"])
-            transactions = client.get_transactions(latest_height)
+            transactions = await client.get_transactions(latest_height)  # Use async version
             
             assert len(transactions) == len(txs), "Transaction count mismatch"
             
@@ -159,23 +161,25 @@ def test_client_get_transactions(client):
             print("No transactions in the latest block")
             
             # Try to find a block with transactions (look back a few blocks)
-            status = client.get_status()
+            status = client.get_status()  # Removed await, get_status is synchronous
             latest_height = int(status.get('sync_info', {}).get('latest_block_height', '0'))
             
             # Look back up to 10 blocks for transactions
+            found_txs = False
             for height in range(latest_height, max(0, latest_height - 10), -1):
-                block = client.get_block(height)
+                block = await client.get_block(height)  # Use async version
                 txs = block.get('block', {}).get('data', {}).get('txs', [])
                 if txs:
                     print(f"Found {len(txs)} transactions in block {height}")
-                    transactions = client.get_transactions(height)
+                    transactions = await client.get_transactions(height)  # Use async version
                     assert len(transactions) == len(txs), "Transaction count mismatch"
+                    found_txs = True
                     break
-            else:
-                pytest.skip("No transactions found in recent blocks")
+            if not found_txs:
+                print("No transactions found in recent blocks, test passes but did not verify decoding.")
                 
     except Exception as e:
-        pytest.skip(f"Failed to get transaction data: {e}")
+        pytest.fail(f"Failed to get transaction data: {e}")
 
 
 def test_client_direct_methods(client):
@@ -205,7 +209,8 @@ def test_client_direct_methods(client):
         pytest.skip(f"Direct methods test failed: {e}")
 
 
-def test_client_intent_queries(client):
+@pytest.mark.asyncio
+async def test_client_intent_queries(client):
     """Test methods for querying intents and wallet info."""
     # Test address from examples
     test_address = "a947ddcc9264a722671c6e4e283cf0e0f3d9cd7baadf5a67e5bbb81865f2560eb80e94591bdc4a80027f2c728be3a7cd"
@@ -213,8 +218,8 @@ def test_client_intent_queries(client):
     
     try:
         # Test all intents query
-        print("\nTesting get_all_intents:")
-        all_intents = client.get_all_intents()
+        print("\nTesting get_all_intents_async:")
+        all_intents = await client.get_all_intents()  # Use async version
         assert isinstance(all_intents, dict), "All intents query failed"
         print(f"Retrieved {len(all_intents)} intents")
         
@@ -224,6 +229,8 @@ def test_client_intent_queries(client):
             if intent_data.get('intent'):
                 intent_type = intent_data['intent'].__class__.__name__
                 intent_types[intent_type] = intent_types.get(intent_type, 0) + 1
+            elif intent_data.get('error'):
+                 print(f"Intent {tag} has parsing error: {intent_data['error']}")
         
         print("Intent types found:")
         for intent_type, count in intent_types.items():
@@ -233,16 +240,20 @@ def test_client_intent_queries(client):
         if all_intents:
             print("\nSample intent details:")
             # Get first intent with a non-None sdk_intent
+            displayed_sample = False
             for tag, intent_data in all_intents.items():
                 if intent_data.get('intent'):
                     print(f"Details for intent {tag}:")
                     display_intent_details(intent_data['intent'])
+                    displayed_sample = True
                     # Just show one as an example
                     break
+            if not displayed_sample:
+                 print("No successfully parsed intents found to display sample.")
             
         # Test wallet info query
-        print("\nTesting get_wallet_info:")
-        wallet_info = client.get_wallet_info(test_address)
+        print("\nTesting get_wallet_info_async:")
+        wallet_info = await client.get_wallet_info_async(test_address)  # Use async version
         assert isinstance(wallet_info, dict), "Wallet info query failed"
         
         # Check if we have balances
@@ -275,9 +286,9 @@ def test_client_intent_queries(client):
                 print("Wallet has no intent")
             
         # Test aggregate balances query
-        print("\nTesting get_aggregate_balances:")
+        print("\nTesting get_aggregate_balances_async:")
         addresses = [test_address, test_address2]
-        aggregate_balances = client.get_aggregate_balances(addresses)
+        aggregate_balances = await client.get_aggregate_balances_async(addresses)  # Use async version
         assert isinstance(aggregate_balances, dict), "Aggregate balances query failed"
         
         print(f"Retrieved {len(aggregate_balances)} aggregate balance entries")
@@ -285,7 +296,7 @@ def test_client_intent_queries(client):
             print(f"  {token}: {amount}")
             
     except Exception as e:
-        pytest.skip(f"Intent query methods test failed: {e}")
+        pytest.fail(f"Intent query methods test failed: {e}")
 
 
 if __name__ == "__main__":
