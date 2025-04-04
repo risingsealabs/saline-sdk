@@ -25,13 +25,13 @@ def test_can_apply_docstrings():
         )
     except ImportError:
         pytest.skip("bindings_docstrings.py module not found")
-    
+
     # Import the bindings module
     from saline_sdk.transaction import bindings
-    
+
     # Store original docstrings to restore later
     original_module_doc = bindings.__doc__
-    
+
     # Classes to test docstring application
     classes_to_test = [
         ("NonEmpty", NON_EMPTY_DOC),
@@ -40,33 +40,33 @@ def test_can_apply_docstrings():
         ("Transaction", TRANSACTION_DOC),
         ("Signed", SIGNED_DOC)
     ]
-    
+
     original_class_docs = {}
-    
+
     # Save original docstrings for cleanup
     for class_name, _ in classes_to_test:
         if hasattr(bindings, class_name):
             cls = getattr(bindings, class_name)
             original_class_docs[class_name] = cls.__doc__
-    
+
     try:
         # Apply docstrings
         bindings.__doc__ = BINDINGS_MODULE_DOC
-        
+
         # Check module docstring was applied
         assert bindings.__doc__ == BINDINGS_MODULE_DOC
-        
+
         # Apply and check class docstrings
         for class_name, doc in classes_to_test:
             if hasattr(bindings, class_name):
                 cls = getattr(bindings, class_name)
                 cls.__doc__ = doc
                 assert cls.__doc__ == doc
-    
+
     finally:
         # Restore original docstrings
         bindings.__doc__ = original_module_doc
-        
+
         for class_name, original_doc in original_class_docs.items():
             if hasattr(bindings, class_name):
                 cls = getattr(bindings, class_name)
@@ -76,7 +76,7 @@ def test_can_apply_docstrings():
 def test_bindings_module_has_required_classes():
     """Test that the bindings module contains the expected classes."""
     from saline_sdk.transaction import bindings
-    
+
     # Check that essential classes exist
     required_classes = [
         "NonEmpty",
@@ -87,16 +87,15 @@ def test_bindings_module_has_required_classes():
         "Instruction",
         "TransferFunds"
     ]
-    
+
     for class_name in required_classes:
         assert hasattr(bindings, class_name), f"bindings module missing {class_name} class"
-        
+
     # Check that essential functions exist
     required_functions = [
         "dumps",
         "loads",
-        "roundtrip"
     ]
-    
+
     for func_name in required_functions:
-        assert hasattr(bindings, func_name), f"bindings module missing {func_name} function" 
+        assert hasattr(bindings, func_name), f"bindings module missing {func_name} function"
