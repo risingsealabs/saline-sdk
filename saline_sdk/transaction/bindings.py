@@ -237,12 +237,42 @@ class Expr():
   def __add__(self, other):
     if (isinstance(other, int) | isinstance(other, float)):
       other = Lit(other)
-    return Arithmetic2(Arithmetic.Add, self, other)
+    return Arithmetic2(self, Arithmetic.Add, other)
+
+  def __radd__(self, other):
+    if (isinstance(other, int) | isinstance(other, float)):
+      other = Lit(other)
+    return Arithmetic2(other, Arithmetic.Add, self)
 
   def __mul__(self, other):
     if (isinstance(other, int) | isinstance(other, float)):
       other = Lit(other)
-    return Arithmetic2(Arithmetic.Mul, self, other)
+    return Arithmetic2(self, Arithmetic.Mul, other)
+
+  def __rmul__(self, other):
+    if (isinstance(other, int) | isinstance(other, float)):
+      other = Lit(other)
+    return Arithmetic2(other, Arithmetic.Mul, self)
+
+  def __sub__(self, other):
+    if (isinstance(other, int) | isinstance(other, float)):
+      other = Lit(other)
+    return Arithmetic2(self, Arithmetic.Sub, other)
+
+  def __rsub__(self, other):
+    if (isinstance(other, int) | isinstance(other, float)):
+      other = Lit(other)
+    return Arithmetic2(other, Arithmetic.Sub, self)
+
+  def __div__(self, other):
+    if (isinstance(other, int) | isinstance(other, float)):
+      other = Lit(other)
+    return Arithmetic2(self, Arithmetic.Div, other)
+
+  def __rdiv__(self, other):
+    if (isinstance(other, int) | isinstance(other, float)):
+      other = Lit(other)
+    return Arithmetic2(other, Arithmetic.Div, self)
 
   def __gt__(self, other):
     if (isinstance(other, int) | isinstance(other, float)):
@@ -771,3 +801,4 @@ class Signed():
     d["signee"] = Transaction.to_json(x.signee)
     d["signers"] = x.signers.list
     return d
+
