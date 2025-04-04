@@ -5,7 +5,7 @@ Intents
 Understanding the Intent System
 ==============================
 
-Intents are the cornerstone of Saline. An intent is a predicate or a series of predicates that specifies what actions an account allows to happen. Intents enable powerful patterns like account abstraction, delegation, token swaps, multi-signature authorization and more.
+Intents are the cornerstone of Saline. An intent is a predicate or a combination of predicates that specifies what actions an account allows to happen. Intents enable powerful patterns like account abstraction, delegation, token swaps, multi-signature authorization and more.
 
 Key Characteristics of Intents:
 
@@ -14,64 +14,55 @@ Key Characteristics of Intents:
 - **Enforceable**: The blockchain enforces intents at transaction execution time
 - **Future-proof**: Intents work with transactions that may not exist yet (like future swap matches)
 
-Intent Primitives
+Intents
 ===============
 
 Saline provides several basic primitives that can be combined to build complex intents:
+
+Primitives
+- ``Restriction()``: Requires two expressions be related in a given way
+- ``Signature()``: Requires signature from a given public key
+
+Modifiers
+- ``Temporary()``: Restricts an intent to a timeframe
+- ``Finite()``: Restricts an intent to a maximum number of uses
+
+Composite
+- ``All()``: Requirement that all sub-intents be fulfilled
+- ``Any()``: Requires all sub-intents be fulfilled
+
+
+Expressions
+===============
+- ``Lit()``: A literal value
+- ``Balance``: Balance of the account hosting the intent
+- ``Receive()``, ``Send()``: Token inflow/outflow from your account
+- ``Arithmetic2()``: Elementary arithmetic over expressions
+
+Operator Syntax
+=============
+
+The bindings module overloads several Python operators to allow for intuitive manipulation of expressions and intents:
+
+- ``&``: shorthand for ``All``
+- ``|``: shorthand for ``Any 1``
+- ``<=``, ``>=``, ``<``, ``>``: create an intent from two expressions
+- ``*``, ``+``, ``-``, ``/``: arithmetically combine two expressions
+
+Examples:
+
+.. code-block:: python
+
+    # Keep at least two USDC for each USDT
+    Balance(USDC) >= 2 * Balance(USDT)
+
+    # Prevent USDC dusting
+    Receive(Flow(None, Token.USDC)) >= 10
 
 Flow Primitives
 --------------
 
 A ``Flow`` represents a token movement between parties:
-
-.. code-block:: python
-
-    Flow(counterparty, token)
-
-- ``counterparty``: The party involved in the transaction (None means any party)
-- ``token``: The token type (e.g., Token.BTC, Token.ETH, Token.USDC)
-
-Action Primitives
----------------
-
-Actions represent operations on flows:
-
-- ``Send()``: Token outflow from your account
-- ``Receive()``: Token inflow to your account
-- ``Signature()``: Signature requirement
-.. - ``Temporary()``: Time-limited condition
-.. - ``Finite()``: Usage-limited condition
-
-Example:
-
-.. code-block:: python
-
-    # Define a send operation for ETH to any counterparty
-    Send(Flow(None, Token.ETH))
-
-    # Define a receive operation for USDC from a specific counterparty
-    Receive(Flow("counterparty_public_key", Token.USDC))
-
-Operator Syntax
-=============
-
-The Saline SDK provides an operator-based syntax for defining intent predicates, making it easier to create and understand common patterns like token swaps.
-
-Basic Operators
--------------
-
-The bindings module overloads several Python operators to allow for intuitive expression construction:
-
-- ``*``: Multiplication, used for quantities
-- ``<=``, ``>=``, ``<``, ``>``: Comparison, used for defining value relationships
-- ``+``: Addition, used to combine expressions
-- ``&``: Logical AND
-- ``|``: Logical OR
-
-Understanding Flows
-----------------
-
-A ``Flow`` is a fundamental concept representing token movement between accounts:
 
 .. code-block:: python
 
@@ -95,7 +86,7 @@ Examples:
     eth_flow = Flow(None, Token.ETH)
 
     # Flow of USDT to/from a specific account
-    usdt_flow = Flow("counterparty_public_key", Token.USDT)
+    usdt_flow = Flow(Lit("counterparty_public_key"), Token.USDT)
 
 Common Intent Patterns
 ==================
@@ -105,18 +96,19 @@ Swap Intent Pattern
 
 .. code-block:: python
 
-    # Define a swap intent: "I want to send X tokens and receive Y tokens"
-    intent = Send(Flow(None, Token.ETH)) * 2 <= Receive(Flow(None, Token.USDT)) * 100
+    # Define a concrete swap intent: I want to swap 2 ETH for 100 USDT
+    intent = Send(Flow(None, Token.ETH)) <= 2 & Receive(Flow(None, Token.USDT)) >= 100
 
-This creates an intent that says: "I'm willing to send 2 ETH in exchange for receiving at least 100 USDT."
+    # Define a rate swap intent: I want 100 USDT for each 2 ETH
+    intent = Send(Flow(None, Token.ETH)) * 2 <= Receive(Flow(None, Token.USDT)) * 100
 
 Breaking Down the Pattern:
 
-1. ``Send(Flow(None, Token.ETH))``: Defines the send operation with ETH as the token
-2. ``* 2``: Specifies the amount of ETH to send
+1. ``Send(Flow(None, Token.ETH))``: the amount of sent ETH
+2. ``* 2``: multiplies by 2
 3. ``<=``: Sets up the exchange relationship (less than or equal)
-4. ``Receive(Flow(None, Token.USDT))``: Defines the receive operation with USDT as the token
-5. ``* 100``: Specifies the amount of USDT to receive
+4. ``Receive(Flow(None, Token.USDT))``: the amount of received USDT
+5. ``* 100``: multiplies by 100
 
 Multi-Signature Intent Pattern
 --------------------------
@@ -132,19 +124,6 @@ Multi-Signature Intent Pattern
     multisig_intent = Any(2, [sig1, sig2, sig3])
 
 This intent requires at least 2 signatures from the 3 defined signers to authorize any transaction.
-
-Restrictive Intent Pattern
-----------------------
-
-A protective wallet that only accepts tokens from a specific sender:
-
-.. code-block:: python
-
-    # Define the trusted counterparty
-    trusted_sender = "826e40d74167b3dcf957b55ad2fee7ba3a76b0d8fdace469d31540b016697c012578352b"
-
-    # Allow receiving SALT only from this specific address
-    restrictive_intent = Receive(Flow(trusted_sender, Token.SALT))
 
 Complete Swap Intent Example
 ------------------------
@@ -163,13 +142,13 @@ Complete Swap Intent Example
     account = Account.from_mnemonic("your mnemonic here").create_subaccount(label="swap_account")
 
     # Define swap parameters
-    give_token = "ETH"
+    give_token = Token.ETH
     give_amount = 2
-    take_token = "USDT"
+    take_token = Token.USDT
     take_amount = 100
 
     # Create swap intent using operator syntax
-    intent = Send(Flow(None, Token[give_token])) * give_amount <= Receive(Flow(None, Token[take_token])) * take_amount
+    intent = Send(Flow(None, give_token)) * give_amount <= Receive(Flow(None, take_token)) * take_amount
 
     # Create a SetIntent instruction and transaction
     set_intent = SetIntent(account.public_key, intent)
@@ -183,51 +162,36 @@ Complete Swap Intent Example
 Advanced Intent Patterns
 ====================
 
-.. Time-Limited Intent
-.. ---------------
+Time-Limited Intent
+---------------
 
-.. Creating an intent that expires after a specific time:
-
-.. .. code-block:: python
-
-..     # Base intent (e.g., token swap)
-..     base_intent = Send(Flow(None, Token.ETH)) * 1 <= Receive(Flow(None, Token.USDT)) * 50
-
-..     # Set expiry time (Unix timestamp) - e.g., 1 day from now
-..     import time
-..     expiry_time = int(time.time()) + (24 * 60 * 60)
-
-..     # Create a time-limited intent
-..     limited_intent = Temporary(base_intent, expiry_time)
-
-.. Usage-Limited Intent
-.. ----------------
-
-.. Creating an intent that can only be used a specific number of times:
-
-.. .. code-block:: python
-
-..     # Base intent
-..     base_intent = Send(Flow(None, Token.ETH)) * 0.1 <= Receive(Flow(None, Token.USDT)) * 5
-
-..     # Create an intent limited to 5 uses
-..     limited_intent = Finite(base_intent, 5)
-
-Complex Intents
---------------------
-
-Intents can be combined with logical operators to create more complex conditions:
+Creating an intent that expires after a specific time:
 
 .. code-block:: python
 
-    # Define component intents
-    swap_intent = Send(Flow(None, Token.ETH)) * 1 <= Receive(Flow(None, Token.USDT)) * 50
-    multisig_intent = Any(2, [sig1, sig2, sig3])
-    small_tx_limit = Send(Flow(None, Token.ETH)) <= 0.1  # Small transaction limit
+    # Base intent (e.g., token swap)
+    base_intent = Send(Flow(None, Token.ETH)) * 1 <= Receive(Flow(None, Token.USDT)) * 50
 
-    # Combined intent: Either small ETH transactions (<=0.1) OR
-    # larger transactions that need multisig AND match the swap rate
-    combined_intent = small_tx_limit | (multisig_intent & swap_intent)
+    # Set expiry time (Unix timestamp) - e.g., 1 day from now
+    import time
+    availableAfter = true
+    expiry_time = int(time.time()) + (24 * 60 * 60)
+
+    # Create a time-limited intent
+    limited_intent = Temporary(expiry_time, availableAfter, base_intent)
+
+Usage-Limited Intent
+----------------
+
+Creating an intent that can only be used a specific number of times:
+
+.. code-block:: python
+
+    # Base intent
+    base_intent = Send(Flow(None, Token.ETH)) * 0.1 <= Receive(Flow(None, Token.USDT)) * 5
+
+    # Create an intent limited to 5 uses
+    limited_intent = Finite(5, base_intent)
 
 Best Practices
 ===========
@@ -237,5 +201,3 @@ Best Practices
 3. **Test extensively**: Verify intents behave as expected with different transaction patterns
 4. **Use None for counterparty when possible**: This allows for maximum interoperability
 5. **Consider adding time limits**: For sensitive operations, consider adding Temporary constraints
-
-For full details on intent operators and syntax, see :download:`Operator Syntax <operator_syntax.md>`.
