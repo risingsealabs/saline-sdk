@@ -50,10 +50,6 @@ try:
             bindings.NonEmpty.__init__.__doc__ = NON_EMPTY_INIT_DOC
         if hasattr(bindings.NonEmpty, 'from_list'):
             bindings.NonEmpty.from_list.__doc__ = NON_EMPTY_FROM_LIST_DOC
-        if hasattr(bindings.NonEmpty, 'to_json'):
-            bindings.NonEmpty.to_json.__doc__ = NON_EMPTY_TO_JSON_DOC
-        if hasattr(bindings.NonEmpty, 'from_json'):
-            bindings.NonEmpty.from_json.__doc__ = NON_EMPTY_FROM_JSON_DOC
 
     # Apply docstrings to enum classes
     if hasattr(bindings, 'Relation'):
@@ -86,8 +82,6 @@ try:
         bindings.Var.__doc__ = VAR_DOC
     if hasattr(bindings, 'Arithmetic2'):
         bindings.Arithmetic2.__doc__ = ARITHMETIC2_DOC
-    if hasattr(bindings, 'Cast'):
-        bindings.Cast.__doc__ = CAST_DOC
 
     # Apply docstrings to Flow class
     if hasattr(bindings, 'Flow'):
@@ -136,14 +130,6 @@ try:
         bindings.Transaction.__doc__ = TRANSACTION_DOC
     if hasattr(bindings, 'Signed'):
         bindings.Signed.__doc__ = SIGNED_DOC
-
-    # Apply docstrings to utility functions
-    if hasattr(bindings, 'dumps'):
-        bindings.dumps.__doc__ = DUMPS_DOC
-    if hasattr(bindings, 'loads'):
-        bindings.loads.__doc__ = LOADS_DOC
-    if hasattr(bindings, 'roundtrip'):
-        pass  # No docstring for roundtrip
 
 except ImportError:
     BINDINGS_DOCSTRINGS_AVAILABLE = False
