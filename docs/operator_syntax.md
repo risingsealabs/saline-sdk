@@ -246,7 +246,7 @@ from saline_sdk.transaction.tx import prepareSimpleTx
 from saline_sdk.rpc.client import Client
 
 # Create account
-account = Account.from_mnemonic("your mnemonic here").create_subaccount(name="swap_account")
+account = Account.from_mnemonic("your mnemonic here").create_subaccount(label="swap_account")
 
 # Define swap parameters
 give_token = "ETH"

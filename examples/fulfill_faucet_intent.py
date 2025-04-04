@@ -93,7 +93,7 @@ async def main():
     client = Client(http_url=RPC_URL)
 
     account = Account.from_mnemonic(TEST_MNEMONIC)
-    alice = account.create_subaccount(name="alice")
+    alice = account.create_subaccount(label="alice")
     
     # Verify faucet exists
     faucet = await client.get_intent_async(FAUCET_ADDRESS)

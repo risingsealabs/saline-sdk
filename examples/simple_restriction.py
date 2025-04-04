@@ -40,7 +40,7 @@ async def main():
     transfer1 = TransferFunds(
         source=trusted.public_key,
         target=wallet.public_key,
-        funds={"SALT": 15}
+        funds={"SALT": 9}
     )
     tx1 = Transaction(instructions=NonEmpty.from_list([transfer1]))
     result1 = await rpc.tx_commit(prepareSimpleTx(trusted, tx1))
@@ -55,7 +55,7 @@ async def main():
     transfer2 = TransferFunds(
         source=untrusted.public_key,
         target=wallet.public_key,
-        funds={"SALT": 15}
+        funds={"SALT": 10}
     )
     tx2 = Transaction(instructions=NonEmpty.from_list([transfer2]))
     result2 = await rpc.tx_commit(prepareSimpleTx(untrusted, tx2))

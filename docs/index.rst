@@ -17,6 +17,7 @@ This documentation provides details on how to install, configure, and use the SD
    quickstart
    overview
    installation
+   intents
    changelog
    troubleshooting
 

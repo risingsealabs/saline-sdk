@@ -33,14 +33,14 @@ def test_accounts():
     """Create test accounts for transactions."""
     root = Account.from_mnemonic(TEST_MNEMONIC)
     
-    sender = root.create_subaccount(name="sender")
-    receiver = root.create_subaccount(name="receiver")
+    sender = root.create_subaccount(label="sender")
+    receiver = root.create_subaccount(label="receiver")
     
-    signer1 = root.create_subaccount(name="signer1")
-    signer2 = root.create_subaccount(name="signer2")
-    signer3 = root.create_subaccount(name="signer3")
-    multisig_receiver = root.create_subaccount(name="multisig_receiver")
-    alice = root.create_subaccount(name="alice")
+    signer1 = root.create_subaccount(label="signer1")
+    signer2 = root.create_subaccount(label="signer2")
+    signer3 = root.create_subaccount(label="signer3")
+    multisig_receiver = root.create_subaccount(label="multisig_receiver")
+    alice = root.create_subaccount(label="alice")
     
     return {
         "root": root,
@@ -191,13 +191,13 @@ if __name__ == "__main__":
     root = Account.from_mnemonic(TEST_MNEMONIC)
     test_accounts = {
         "root": root,
-        "sender": root.create_subaccount(name="sender"),
-        "receiver": root.create_subaccount(name="receiver"),
-        "signer1": root.create_subaccount(name="signer1"),
-        "signer2": root.create_subaccount(name="signer2"),
-        "signer3": root.create_subaccount(name="signer3"),
-        "multisig_receiver": root.create_subaccount(name="multisig_receiver"),
-        "alice": root.create_subaccount(name="alice")
+        "sender": root.create_subaccount(label="sender"),
+        "receiver": root.create_subaccount(label="receiver"),
+        "signer1": root.create_subaccount(label="signer1"),
+        "signer2": root.create_subaccount(label="signer2"),
+        "signer3": root.create_subaccount(label="signer3"),
+        "multisig_receiver": root.create_subaccount(label="multisig_receiver"),
+        "alice": root.create_subaccount(label="alice")
     }
     
     print("\n=== Testing node connectivity ===")

@@ -28,8 +28,8 @@ This example demonstrates how to create and submit a basic transfer transaction.
         account = Account.from_mnemonic(TEST_MNEMONIC)
 
         # Derive subaccounts for sender and receiver
-        sender = account.create_subaccount(name="sender")
-        receiver = account.create_subaccount(name="receiver")
+        sender = account.create_subaccount(label="sender")
+        receiver = account.create_subaccount(label="receiver")
 
         transfer_instruction = transfer(
             sender=sender.public_key,
@@ -71,8 +71,8 @@ See ``examples/token_swap.py``.
     async def create_and_submit_swap():
         # Create accounts for the swap participants
         root = Account.from_mnemonic(TEST_MNEMONIC)
-        alice = root.create_subaccount(name="alice")
-        bob = root.create_subaccount(name="bob")
+        alice = root.create_subaccount(label="alice")
+        bob = root.create_subaccount(label="bob")
 
         # Define swap parameters
         alice_token = "USDC"
@@ -146,12 +146,12 @@ See ``examples/install_multisig_intent.py``.
         root = Account.from_mnemonic(TEST_MNEMONIC)
 
         # Create 3 signers for the multisig
-        signer1 = root.create_subaccount(name="signer1")
-        signer2 = root.create_subaccount(name="signer2")
-        signer3 = root.create_subaccount(name="signer3")
+        signer1 = root.create_subaccount(label="signer1")
+        signer2 = root.create_subaccount(label="signer2")
+        signer3 = root.create_subaccount(label="signer3")
         
         # Create a multisig wallet subaccount that will have the intent
-        multisig_wallet = root.create_subaccount(name="multisig_wallet")
+        multisig_wallet = root.create_subaccount(label="multisig_wallet")
 
         # Define the multisig intent
         # This creates an intent that requires either:
@@ -280,9 +280,9 @@ See ``examples/faucet_and_swap_intent.py``.
     async def create_swap_match():
         # Create account and client
         root_account = Account.create()
-        alice = root_account.create_subaccount(name="alice")
-        bob = root_account.create_subaccount(name="bob")
-        matcher = root_account.create_subaccount(name="matcher")
+        alice = root_account.create_subaccount(label="alice")
+        bob = root_account.create_subaccount(label="bob")
+        matcher = root_account.create_subaccount(label="matcher")
         
         rpc = Client(http_url=RPC_URL)
         
@@ -330,7 +330,7 @@ The Saline SDK includes a testnet module for development purposes. The faucet fu
     async def request_testnet_tokens():
         # Create an account
         account = Account.create()
-        alice = account.create_subaccount(name="alice")
+        alice = account.create_subaccount(label="alice")
         
         # Create a client
         client = Client(http_url="http://localhost:26657")

@@ -127,17 +127,17 @@ class Saline:
         """
         self.account = Account.from_mnemonic(mnemonic)
         
-    def create_subaccount(self, name: str) -> Subaccount:
+    def create_subaccount(self, name=None):
         """
-        Create a new subaccount.
+        Create a new subaccount under the current account.
         
         Args:
-            name: Name of the subaccount
+            name: Optional label for the subaccount
             
         Returns:
-            Subaccount: The created subaccount
+            The public key of the new subaccount
         """
-        return self.account.create_subaccount(name=name)
+        return self.account.create_subaccount(label=name)
 
     def set_default_subaccount(self, name: str) -> None:
         """

@@ -26,12 +26,12 @@ async def create_and_install_multisig_intent():
     root = Account.from_mnemonic(TEST_MNEMONIC)
 
     # Create 3 signers for the multisig
-    signer1 = root.create_subaccount(name="signer1")
-    signer2 = root.create_subaccount(name="signer2")
-    signer3 = root.create_subaccount(name="signer3")
+    signer1 = root.create_subaccount(label="signer1")
+    signer2 = root.create_subaccount(label="signer2")
+    signer3 = root.create_subaccount(label="signer3")
     
     # Create a multisig wallet subaccount that will have the intent
-    multisig_wallet = root.create_subaccount(name="multisig_wallet")
+    multisig_wallet = root.create_subaccount(label="multisig_wallet")
 
     print("Multisig Participants:")
     print(f"Signer 1: {signer1.public_key[:10]}...{signer1.public_key[-8:]}")

@@ -17,8 +17,8 @@ class TestSimpleTransfer(unittest.TestCase):
     def setUp(self):
         """Set up test accounts with deterministic keys."""
         self.master = Account.from_mnemonic(self.TEST_MNEMONIC)
-        self.sender = self.master.create_subaccount(name="sender", path="m/12381/997/0/0/0")
-        self.receiver = self.master.create_subaccount(name="receiver", path="m/12381/997/0/0/1")
+        self.sender = self.master.create_subaccount(label="sender", path="m/12381/997/0/0/0")
+        self.receiver = self.master.create_subaccount(label="receiver", path="m/12381/997/0/0/1")
 
         # Load fixture or fail
         fixtures_paths = [
@@ -96,8 +96,8 @@ class TestSimpleTransferPytest:
     
     def test_transfer_creation_with_fixtures(self, test_account):
         """Test transfer creation using pytest fixtures."""
-        sender = test_account.create_subaccount(name="sender", path="m/12381/997/0/0/0")
-        recipient = test_account.create_subaccount(name="recipient", path="m/12381/997/0/0/1")
+        sender = test_account.create_subaccount(label="sender", path="m/12381/997/0/0/0")
+        recipient = test_account.create_subaccount(label="recipient", path="m/12381/997/0/0/1")
         
         transfer_instruction = transfer(
             sender=sender.public_key,
@@ -117,8 +117,8 @@ class TestSimpleTransferPytest:
         
     def test_transfer_signing_with_fixtures(self, test_account):
         """Test transfer signing using pytest fixtures."""
-        sender = test_account.create_subaccount(name="sender", path="m/12381/997/0/0/0")
-        recipient = test_account.create_subaccount(name="recipient", path="m/12381/997/0/0/1")
+        sender = test_account.create_subaccount(label="sender", path="m/12381/997/0/0/0")
+        recipient = test_account.create_subaccount(label="recipient", path="m/12381/997/0/0/1")
         
         transfer_instruction = transfer(
             sender=sender.public_key,

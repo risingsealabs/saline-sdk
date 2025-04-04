@@ -23,8 +23,8 @@ async def create_and_submit_swap():
 
     # Create accounts for the swap participants
     root = Account.from_mnemonic(TEST_MNEMONIC)
-    alice = root.create_subaccount(name="alice")
-    bob = root.create_subaccount(name="bob")
+    alice = root.create_subaccount(label="alice")
+    bob = root.create_subaccount(label="bob")
 
     print("Swap Participants:")
     print(f"Alice: {alice.public_key[:10]}...{alice.public_key[-8:]}")
