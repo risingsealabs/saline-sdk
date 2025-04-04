@@ -50,6 +50,7 @@ async def get_tokens_from_faucet_dynamic(client, account, faucet_intent):
     funds = {}
 
     # The faucet intent has a structure with children (restrictions) for each token
+    # We here extract the tokens we're allowed to receive and populate our funds dictionary
     if "children" in faucet_intent:
         for restriction in faucet_intent["children"]:
             if (restriction.get("tag") == "Restriction" and
