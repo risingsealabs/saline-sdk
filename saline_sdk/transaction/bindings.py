@@ -2,11 +2,12 @@
 
 import json
 import string
-import uuid
+import typing
 from blspy import G1Element, G2Element
 from enum import Enum
 from numpy import uint64, float64
 from typing import Optional
+from uuid import UUID
 
 class NonEmpty[T]():
   def __init__(self, head: T, tail:list[T]):
@@ -296,7 +297,7 @@ class Expr():
 
 
 class Lit(Expr):
-  def __init__(self, value: any):
+  def __init__(self, value: typing.Any):
     super().__init__()
     self.value = value
 
@@ -782,7 +783,7 @@ class Transaction():
 
 
 class Signed():
-  def __init__(self, nonce: uuid, signature: G1Element, signee: Transaction, signers: NonEmpty[G2Element]):
+  def __init__(self, nonce: UUID, signature: G1Element, signee: Transaction, signers: NonEmpty[G2Element]):
     super().__init__()
     self.nonce = nonce
     self.signature = signature
