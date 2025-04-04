@@ -20,16 +20,19 @@ Intents
 Saline provides several basic primitives that can be combined to build complex intents:
 
 Primitives
-- ``Restriction()``: Requires two expressions be related in a given way
-- ``Signature()``: Requires signature from a given public key
+--------------
+- ``Restriction()``: Require two expressions be related in a given way
+- ``Signature()``: Require signature from a given public key
 
 Modifiers
-- ``Temporary()``: Restricts an intent to a timeframe
-- ``Finite()``: Restricts an intent to a maximum number of uses
+--------------
+- ``Temporary()``: Restrict an intent to a timeframe
+- ``Finite()``: Restrict an intent to a maximum number of uses
 
 Composite
+--------------
 - ``All()``: Requirement that all sub-intents be fulfilled
-- ``Any()``: Requires all sub-intents be fulfilled
+- ``Any()``: Require all sub-intents be fulfilled
 
 
 Expressions
@@ -42,7 +45,7 @@ Expressions
 Operator Syntax
 =============
 
-The bindings module overloads several Python operators to allow for intuitive manipulation of expressions and intents:
+The sdk overloads several Python operators to allow for intuitive manipulation of expressions and intents:
 
 - ``&``: shorthand for ``All``
 - ``|``: shorthand for ``Any 1``
@@ -59,7 +62,7 @@ Examples:
     # Prevent USDC dusting
     Receive(Flow(None, Token.USDC)) >= 10
 
-Flow Primitives
+Flow
 --------------
 
 A ``Flow`` represents a token movement between parties:
@@ -71,12 +74,11 @@ A ``Flow`` represents a token movement between parties:
 The flow parameters define:
 
 1. **Counterparty**: The account on the other side of the transaction
-   - ``None``: Any account (wildcard)
-   - ``"public_key"``: A specific account
+  - ``None``: Any account
+  - ``"public_key"``: A specific account
 
 2. **Token**: The token type for the flow
-   - ``Token.BTC``, ``Token.ETH``, etc.: Predefined token types
-   - ``Token["custom_token"]``: Custom token syntax
+  - ``Token.BTC``, ``Token.ETH``, etc.
 
 Examples:
 
@@ -113,6 +115,8 @@ Breaking Down the Pattern:
 Multi-Signature Intent Pattern
 --------------------------
 
+This intent requires at least 2 signatures from the 3 defined signers to authorize any transaction.
+
 .. code-block:: python
 
     # Define the signers
@@ -122,8 +126,6 @@ Multi-Signature Intent Pattern
 
     # Create a 2-of-3 multisig intent
     multisig_intent = Any(2, [sig1, sig2, sig3])
-
-This intent requires at least 2 signatures from the 3 defined signers to authorize any transaction.
 
 Complete Swap Intent Example
 ------------------------
