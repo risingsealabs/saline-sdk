@@ -27,7 +27,7 @@ This type is used in many Saline data structures where an empty collection is in
 such as transaction instructions or signers lists.
 
 Attributes:
-    list: The internal list containing the head and tail elements
+    list: The internal standard python list
 """
 
 NON_EMPTY_INIT_DOC = """
@@ -43,29 +43,6 @@ Create a NonEmpty collection from a regular list.
 
 Args:
     elements: A list with at least one element
-
-Returns:
-    A new NonEmpty collection
-
-Raises:
-    ValueError: If the input list is empty
-"""
-
-NON_EMPTY_TO_JSON_DOC = """
-Convert a NonEmpty collection to a JSON-compatible format.
-
-Args:
-    x: The NonEmpty collection to convert
-
-Returns:
-    A list containing all elements
-"""
-
-NON_EMPTY_FROM_JSON_DOC = """
-Create a NonEmpty collection from a JSON-compatible format.
-
-Args:
-    x: A list with at least one element
 
 Returns:
     A new NonEmpty collection
@@ -111,37 +88,39 @@ Members:
 WITNESS_DOC = """
 Base class for transaction witnesses.
 
-Witnesses are used to validate and authorize transactions in the Saline blockchain.
+Witnesses are used to provide evidence for non-trivial validations.
+For instance, given a multi-level multi-sig, witnesses specify the paths of
+the tree that are valid, which means the verification engine can avoid
+evaluating all the false paths.
+This allows doing less computation on-chain, where it's more expensive.
 """
 
 ALLW_DOC = """
-A witness that requires all child witnesses to be valid.
-
-This is similar to an AND logical operation for witnesses.
+A witness for an All intent
 
 Attributes:
-    children: List of child witnesses that must all be valid
+    children: List of child witnesses
 """
 
 ANYW_DOC = """
-A witness that requires any one of its children to be valid.
-
-This is similar to an OR logical operation for witnesses.
+A witness for an Any intent. Should have exactly as many children as the
+required threshold
 
 Attributes:
-    children: Dictionary of child witnesses, any of which can be valid
+    children: Dictionary of child witnesses keyed by the index of the matching intent
 """
 
 AUTOW_DOC = """
-An automatic witness that's always valid without extra validation.
+A witness to prove validation of trivial or unambiguous intents
 """
 
 # Expression documentation
 EXPR_DOC = """
 Base class for expressions in the Saline blockchain.
 
-Expressions represent calculations, comparisons, and operations that can be
-evaluated to produce values or conditions.
+Expressions represent values, variables, calculations, as well as references
+to data from transactions, wallets or oracles, that can be evaluated
+at the time of verification.
 """
 
 LIT_DOC = """
@@ -152,14 +131,14 @@ Attributes:
 """
 
 RECEIVE_DOC = """
-An expression representing a token receive operation.
+An expression representing the amount of tokens received
 
 Attributes:
     flow: The token flow specification
 """
 
 SEND_DOC = """
-An expression representing a token send operation.
+An expression representing the amount of tokens sent
 
 Attributes:
     flow: The token flow specification
@@ -173,13 +152,9 @@ ARITHMETIC2_DOC = """
 An arithmetic operation between two expressions.
 
 Attributes:
-    operation: The arithmetic operation type
     lhs: Left-hand side expression
+    operation: The arithmetic operation type
     rhs: Right-hand side expression
-"""
-
-CAST_DOC = """
-An expression that performs type casting.
 """
 
 # Flow documentation
@@ -227,8 +202,12 @@ Attributes:
     rhs: Right-hand side expression
 """
 
-LIMITED_DOC = """
-A limited intent with specific constraints.
+FINITE_DOC = """
+An intent wrapper that restricts it to a certain number of uses
+"""
+
+TEMPORARY_DOC = """
+An intent wrapper that restricts it to a timeframe
 """
 
 SIGNATURE_DOC = """
@@ -273,7 +252,7 @@ in transactions.
 TRANSFER_FUNDS_DOC = """
 An instruction to transfer funds between accounts.
 
-Parameters:
+Args:
     source (str): The sender account's public key
     target (str): The recipient account's public key
     funds (Dict[str, float]): Dictionary mapping token types to amounts
@@ -285,15 +264,16 @@ Attributes:
 """
 
 OR_INTENT_DOC = """
-An instruction to set an OR intent for an account.
+An instruction to add to, rather than replace an account's intent.
+For instance, to post multiple limit orders.
 
 Attributes:
-    host: The account to set the intent for
-    intent: The intent to set
+    host: The account to add the intent to
+    intent: The intent to add
 """
 
 SET_INTENT_DOC = """
-An instruction to set an intent for an account.
+An instruction to set the intent for an account.
 
 Attributes:
     host: The account to set the intent for
@@ -301,7 +281,7 @@ Attributes:
 """
 
 DELETE_DOC = """
-An instruction to delete an account's intent.
+An instruction to reset an account to the default intent.
 
 Attributes:
     host: The account whose intent will be deleted
@@ -321,7 +301,7 @@ Represents a transaction on the Saline blockchain.
 
 A transaction consists of one or more instructions to be executed atomically.
 
-Parameters:
+Args:
     instructions (List[Instruction]): List of instructions to execute
 
 Attributes:
@@ -331,7 +311,7 @@ Attributes:
 SIGNED_DOC = """
 Represents a signed transaction ready for submission.
 
-Parameters:
+Args:
     nonce (str): Unique identifier for this transaction
     signature (str): The cryptographic signature
     signee (Transaction): The transaction being signed
@@ -342,37 +322,4 @@ Attributes:
     signature: The cryptographic signature
     signee: The transaction being signed
     signers: Non-empty list of public keys that signed the transaction
-"""
-
-# Utility function documentation
-DUMPS_DOC = """
-Convert a Python object to a JSON string.
-
-Args:
-    x: The Python object to convert
-
-Returns:
-    A JSON string representation
-"""
-
-LOADS_DOC = """
-Parse a JSON string into a Python object.
-
-Args:
-    x: JSON string to parse
-
-Returns:
-    The corresponding Python object
-"""
-
-ROUNDTRIP_DOC = """
-Test the roundtrip conversion between Python objects and JSON.
-
-Args:
-    from_json: Function to convert from JSON to Python
-    to_json: Function to convert from Python to JSON
-    values: List of values to test
-
-Returns:
-    True if all roundtrips are successful, False otherwise
 """
