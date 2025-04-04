@@ -225,16 +225,9 @@ async def find_matching_swaps_from_blockchain(client: Client) -> List[Tuple[Swap
 
     swaps: List[SwapDetails] = []
     print("--- Extracting Swap Details from Intents ---")
-    # Assume keys are the host addresses (public keys)
-    for host_address, intent_data in all_intents.items():
-        # Ensure the key looks like a plausible address (simple check)
-        if not isinstance(host_address, str) or len(host_address) < 50: # Basic sanity check
-             print(f"Skipping potential non-address key: {host_address[:10]}...")
-             continue
-
-        print(f"Parsing intent for host: {host_address[:10]}..." , end=" ")
-        # Pass the host_address (key) and intent_data (value) to the extraction function
-        swap_details = extract_swap_details(intent_data, host_address)
+    for address, intent_data in all_intents.items():
+        print(f"Parsing intent for address: {address[:10]}..." , end=" ")
+        swap_details = extract_swap_details(intent_data, address)
         if swap_details:
             swaps.append(swap_details)
             print(f" -> Found swap: {swap_details['give_amount']} {swap_details['give_token']} for {swap_details['want_amount']} {swap_details['want_token']}")
@@ -369,9 +362,9 @@ async def fulfill_swap_pair(client: Client, swap_pair: Tuple[SwapDetails, SwapDe
 
     # Final outcome summary
     if tx_successful:
-         print(f"\nOutcome: Swap appears successful (Tx: {tx_hash}). Check final balances above.")
+         print(f"\nTx: {tx_hash}")
     else:
-         print(f"\nOutcome: Swap failed ({error_msg}). Check final balances above.")
+         print(f"\nOutcome: Swap failed ({error_msg}")
 
 async def main():
     print("=== Saline SDK Simple Swap Matcher Example ===\n")
