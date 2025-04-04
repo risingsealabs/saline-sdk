@@ -270,25 +270,6 @@ Instructions are the fundamental operations that can be performed
 in transactions.
 """
 
-ISSUE_DOC = """
-An instruction to issue new assets or rights.
-
-Attributes:
-    issuer: The account issuing the asset/right
-    holder: The account receiving the asset/right
-    terms: The intent specifying the terms of issuance
-"""
-
-TRANSFER_RIGHTS_DOC = """
-An instruction to transfer rights between accounts.
-
-Attributes:
-    seller: The account selling the rights
-    buyer: The account buying the rights
-    terms: The intent specifying the terms of transfer
-    issuer: The original issuer of the rights
-"""
-
 TRANSFER_FUNDS_DOC = """
 An instruction to transfer funds between accounts.
 

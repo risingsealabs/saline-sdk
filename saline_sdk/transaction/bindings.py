@@ -614,10 +614,6 @@ class Instruction():
   @staticmethod
   def from_json(d):
     match d["tag"]:
-      case "Issue":
-        return Issue.from_json(d)
-      case "TransferRights":
-        return TransferRights.from_json(d)
       case "TransferFunds":
         return TransferFunds.from_json(d)
       case "OrIntent":
@@ -632,12 +628,6 @@ class Instruction():
   @staticmethod
   def to_json(x):
     match x:
-      case Issue():
-        d = {"tag" : "Issue"} | Issue.to_json(x)
-        return dict(sorted(d.items()))
-      case TransferRights():
-        d = {"tag" : "TransferRights"} | TransferRights.to_json(x)
-        return dict(sorted(d.items()))
       case TransferFunds():
         d = {"tag" : "TransferFunds"} | TransferFunds.to_json(x)
         return dict(sorted(d.items()))
@@ -653,48 +643,6 @@ class Instruction():
       case Bridge():
         d = {"tag" : "Bridge"} | Bridge.to_json(x)
         return dict(sorted(d.items()))
-
-
-class Issue(Instruction):
-  def __init__(self, issuer: G2Element, holder: G2Element, terms: Intent):
-    super().__init__()
-    self.issuer = issuer
-    self.holder = holder
-    self.terms = terms
-
-  @staticmethod
-  def from_json(d):
-    return Issue(d["issuer"], d["holder"], Intent.from_json(d["terms"]))
-
-  @staticmethod
-  def to_json(x):
-    d = dict()
-    d["issuer"] = x.issuer
-    d["holder"] = x.holder
-    d["terms"] = Intent.to_json(x.terms)
-    return d
-
-
-class TransferRights(Instruction):
-  def __init__(self, seller: G2Element, buyer: G2Element, terms: Intent, issuer: G2Element):
-    super().__init__()
-    self.seller = seller
-    self.buyer = buyer
-    self.terms = terms
-    self.issuer = issuer
-
-  @staticmethod
-  def from_json(d):
-    return TransferRights(d["seller"], d["buyer"], Intent.from_json(d["terms"]), d["issuer"])
-
-  @staticmethod
-  def to_json(x):
-    d = dict()
-    d["seller"] = x.seller
-    d["buyer"] = x.buyer
-    d["terms"] = Intent.to_json(x.terms)
-    d["issuer"] = x.issuer
-    return d
 
 
 class TransferFunds(Instruction):
