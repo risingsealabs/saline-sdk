@@ -2,7 +2,7 @@
 Transaction encoding for Saline SDK.
 
 This module handles transaction serialization for both network transmission
-and signature generation, specifically designed to match Saline's Haskell
+and signature generation, specifically designed to match Saline's
 implementation's expectations.
 """
 
@@ -84,7 +84,7 @@ def decode_network_tx(data: bytes) -> Dict[str, Any]:
         if not isinstance(tx_dict, dict):
             raise ValueError("Transaction must be a dictionary")
 
-      
+
         required_fields = ['signature', 'signers']
         for field in required_fields:
             if field not in tx_dict:
@@ -100,10 +100,10 @@ def decode_network_tx(data: bytes) -> Dict[str, Any]:
 def encode_base64(data: bytes) -> str:
     """
     Encode binary data as base64 string.
-    
+
     Args:
         data: Binary data to encode
-        
+
     Returns:
         Base64 encoded string
     """
@@ -113,13 +113,13 @@ def encode_base64(data: bytes) -> str:
 def decode_base64(data: str) -> bytes:
     """
     Decode base64 string to binary data.
-    
+
     Args:
         data: Base64 encoded string
-        
+
     Returns:
         Decoded binary data
-        
+
     Raises:
         ValueError: If input is not valid base64
     """

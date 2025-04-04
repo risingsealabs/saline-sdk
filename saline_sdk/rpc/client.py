@@ -489,7 +489,7 @@ class Client:
             if isinstance(balances, dict):
                 # If balances is a dictionary, just return the value for the token
                 return float(balances.get(token, 0))
-            
+
             # If balances is a list, search for the token
             for balance_item in balances:
                 if isinstance(balance_item, list) and len(balance_item) >= 2:
@@ -501,7 +501,7 @@ class Client:
                     amount = balance_item.get('amount')
                     if bal_token == token and amount is not None:
                         return float(amount)
-            
+
             # Token not found in balances
             return 0.0
         except Exception as e:
@@ -535,10 +535,10 @@ class Client:
             # Get all balances in one query using wallet_info
             wallet_info = await self.get_wallet_info_async(address)
             balances = wallet_info.get('balances', [])
-            
+
             # Convert to a standard dictionary format
             balance_dict = {}
-            
+
             # Process the balances based on their format
             if isinstance(balances, dict):
                 # If it's already a dictionary, just convert values to float
@@ -555,7 +555,7 @@ class Client:
                         amount = balance_item.get('amount')
                         if token and amount is not None:
                             balance_dict[token] = float(amount)
-            
+
             return balance_dict
         except Exception as e:
             self._debug_log(f"Error getting all balances: {e}")
@@ -875,7 +875,7 @@ class Client:
                         self._debug_log(f"Error querying wallet info: {decoded_str}")
                         return {}
 
-                    # Wallet response is a tuple of (balances, intent) in Haskell
+                    # Wallet response is a tuple of (balances, intent)
                     # This is represented as a 2-element array in JSON
                     if json_value and isinstance(json_value, list) and len(json_value) == 2:
                         balances = json_value[0]

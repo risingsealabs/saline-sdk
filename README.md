@@ -64,10 +64,10 @@ import asyncio
 async def get_testnet_tokens():
     # Create a client
     client = Client(http_url="http://localhost:26657")
-    
+
     # Get tokens for a subaccount directly
     await top_up_from_faucet(account=subaccount, client=client)
-    
+
     # Or use the root account with default subaccount
     await top_up_from_faucet(account=saline.account, client=client)
 
@@ -148,15 +148,15 @@ import asyncio
 async def check_and_transfer():
     # Check balance
     balance = await saline.get_balance_async(currency="USDC")
-    
+
     if balance >= 100:
         # Send transaction
         result = await saline.send_transaction_async(encoded_tx)
-        
+
         # Wait for confirmation
         receipt = await saline.wait_for_transaction_receipt_async(result['hash'])
         return receipt
-    
+
     return None
 
 # Run the async function
@@ -204,7 +204,7 @@ poetry run make html
 ```
 Repl:
 ```bash
-poetry run sphinx-autobuild . _build/html --port 8001 --open-browser 
+poetry run sphinx-autobuild . _build/html --port 8001 --open-browser
 ```
 
 
@@ -212,7 +212,7 @@ poetry run sphinx-autobuild . _build/html --port 8001 --open-browser
 
 The `bindings.py` module is auto-generated from the Saline codebase and should not be modified directly. To provide documentation for this module, we use a separate file `bindings_docstrings.py` that contains docstrings that are applied at documentation build time.
 
-This approach allows us to maintain proper documentation without modifying the auto-generated code. When the Haskell code changes and `bindings.py` is regenerated, only the `bindings_docstrings.py` file needs to be updated to reflect any changes in the API.
+This approach allows us to maintain proper documentation without modifying the auto-generated code. When `bindings.py` is regenerated, only the `bindings_docstrings.py` file needs to be updated to reflect any changes in the API.
 
 To update the documentation for the bindings module:
 

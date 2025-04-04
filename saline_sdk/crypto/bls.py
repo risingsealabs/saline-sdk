@@ -4,7 +4,7 @@ BLS signature implementation for Saline SDK.
 This module provides BLS signature functionality using the BLS12-381 curve,
 following the IETF BLS signature standard draft v4 (basic scheme).
 
-This implementation matches the Haskell implementation in Saline exactly:
+This implementation matches the implementation in Saline exactly:
 - Uses raw message bytes for signing (no pre-hashing)
 - Uses BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_ as domain parameter
 - Follows the same serialization format
@@ -94,7 +94,7 @@ class BLS:
             ValueError: If signing fails
 
         Note:
-            This matches the Haskell implementation exactly:
+            This matches the implementation exactly:
             - Signs raw message bytes directly (no pre-hashing)
             - Uses BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_ domain parameter
         """
@@ -199,5 +199,3 @@ class BLS:
         except Exception as e:
             logger.error(f"Aggregate signature verification error: {e}")
             return False
-
-    
