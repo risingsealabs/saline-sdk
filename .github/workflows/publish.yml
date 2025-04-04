@@ -1,0 +1,41 @@
+name: Publish Python Package to PyPI
+
+on:
+  release:
+    types: [ created ]
+
+permissions:
+  id-token: write # Essential for trusted publishing
+  contents: read # Needed to checkout the code
+
+jobs:
+  publish-to-pypi:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      # IMPORTANT: this permission is mandatory for Trusted Publishing
+      id-token: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Install dependencies
+      run: poetry install --no-interaction --no-root
+
+    - name: Build package
+      run: poetry build
+
+    - name: Publish package distributions to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
