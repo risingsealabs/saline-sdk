@@ -6,7 +6,7 @@ import asyncio
 import json
 from saline_sdk.account import Account
 from saline_sdk.transaction.bindings import (
-    NonEmpty, Transaction, SetIntent, TransferFunds, Receive, Flow, Token
+    NonEmpty, Transaction, SetIntent, TransferFunds, Receive, Flow, Lit, Token
 )
 from saline_sdk.transaction.tx import prepareSimpleTx
 from saline_sdk.rpc.client import Client
@@ -50,8 +50,8 @@ async def create_account_with_intent():
     print("\nCreating restrictive intent...")
     
     # Create intent
-    restricted_intent = Receive(Flow(trusted.public_key, Token.SALT))
-    
+    restricted_intent = Receive(Flow(Lit(trusted.public_key), Token.SALT)) >= 0
+
     # Create the SetIntent instruction
     set_intent = SetIntent(wallet.public_key, restricted_intent)
     

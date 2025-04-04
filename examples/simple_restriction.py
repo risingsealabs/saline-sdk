@@ -1,7 +1,7 @@
 from saline_sdk.account import Account
-from saline_sdk.transaction.bindings import Flow, NonEmpty, Receive, SetIntent, Transaction, TransferFunds
+from saline_sdk.transaction.bindings import Flow, Lit, NonEmpty, Receive, SetIntent, Token, Transaction, TransferFunds
 from saline_sdk.transaction.tx import prepareSimpleTx
-from saline_sdk.rpc.client import Client, Token
+from saline_sdk.rpc.client import Client
 import asyncio
 from saline_sdk.rpc.testnet.faucet import top_up_from_faucet
 
@@ -25,7 +25,7 @@ async def main():
     await top_up_from_faucet(account=untrusted, client=rpc)
     
     # Set restrictive intent
-    restricted_intent = Receive(Flow(trusted.public_key, Token.SALT)) >= 10
+    restricted_intent = Receive(Flow(Lit(trusted.public_key), Token.SALT)) >= 10
     set_intent = SetIntent(wallet.public_key, restricted_intent)
     tx = Transaction(instructions=NonEmpty.from_list([set_intent]))
     intent_result = await rpc.tx_commit(prepareSimpleTx(wallet, tx))

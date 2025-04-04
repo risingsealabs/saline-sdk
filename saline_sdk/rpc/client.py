@@ -34,21 +34,12 @@ import aiohttp
 import asyncio
 import requests
 from saline_sdk.rpc.error import RPCError
-from saline_sdk.transaction.bindings import Intent, All, Any, Finite, Temporary, Signature, Lit, Restriction, Relation, Token as SDKToken
+from saline_sdk.transaction.bindings import Intent, All, Any, Finite, Temporary, Signature, Lit, Restriction, Relation, Token
 
 # Type for tokens
 from enum import Enum
 
 logger = logging.getLogger(__name__)
-
-
-class Token(Enum):
-    BTC = "BTC"
-    ETH = "ETH"
-    USDC = "USDC"
-    USDT = "USDT"
-    SALT = "SALT"
-
 
 class Client:
     """
