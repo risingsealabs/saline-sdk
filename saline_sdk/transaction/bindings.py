@@ -20,7 +20,9 @@ class NonEmpty[T]():
       case _: return NonEmpty(elements[0], elements[1:])
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'NonEmpty'):
+    if (not isinstance(x,NonEmpty)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(NonEmpty)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     return x.list
 
   @staticmethod
@@ -47,7 +49,9 @@ class Relation(Enum):
     return Relation[s]
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Relation'):
+    if (not isinstance(x,Relation)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Relation)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     return x.name
 
 
@@ -63,7 +67,9 @@ class Token(Enum):
     return Token[s]
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Token'):
+    if (not isinstance(x,Token)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Token)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     return x.name
 
 
@@ -78,7 +84,9 @@ class Arithmetic(Enum):
     return Arithmetic[s]
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Arithmetic'):
+    if (not isinstance(x,Arithmetic)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Arithmetic)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     return x.name
 
 
@@ -93,7 +101,9 @@ class VariableTag(Enum):
     return VariableTag[s]
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'VariableTag'):
+    if (not isinstance(x,VariableTag)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(VariableTag)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     return x.name
 
 
@@ -108,7 +118,9 @@ class Variable():
     return Variable(VariableTag.from_json(d["kind"]), d["name"])
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Variable'):
+    if (not isinstance(x,Variable)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Variable)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["kind"] = VariableTag.to_json(x.kind)
     d["name"] = x.name
@@ -132,7 +144,9 @@ class Witness():
         return AutoW.from_json(d)
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Witness'):
+    if (not isinstance(x,Witness)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Witness)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     match x:
       case AllW():
         d = {"tag" : "AllW"} | AllW.to_json(x)
@@ -155,7 +169,9 @@ class AllW(Witness):
     return AllW(list(map(Witness.from_json, d["children"])))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'AllW'):
+    if (not isinstance(x,AllW)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(AllW)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["children"] = list(map(Witness.to_json, x.children))
     return d
@@ -171,7 +187,9 @@ class AnyW(Witness):
     return AnyW(dict(d["children"]))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'AnyW'):
+    if (not isinstance(x,AnyW)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(AnyW)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["children"] = list(x.children.items())
     return d
@@ -186,7 +204,9 @@ class AutoW(Witness):
     return AutoW()
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'AutoW'):
+    if (not isinstance(x,AutoW)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(AutoW)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     return d
 
@@ -214,7 +234,9 @@ class Expr():
         return Arithmetic2.from_json(d)
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Expr'):
+    if (not isinstance(x,Expr)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Expr)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     match x:
       case Lit():
         d = {"tag" : "Lit"} | Lit.to_json(x)
@@ -306,7 +328,9 @@ class Lit(Expr):
     return Lit(d["value"])
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Lit'):
+    if (not isinstance(x,Lit)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Lit)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["value"] = x.value
     return d
@@ -322,7 +346,9 @@ class Balance(Expr):
     return Balance(Token.from_json(d["token"]))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Balance'):
+    if (not isinstance(x,Balance)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Balance)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["token"] = Token.to_json(x.token)
     return d
@@ -338,7 +364,9 @@ class Receive(Expr):
     return Receive(Flow.from_json(d["flow"]))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Receive'):
+    if (not isinstance(x,Receive)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Receive)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["flow"] = Flow.to_json(x.flow)
     return d
@@ -354,7 +382,9 @@ class Send(Expr):
     return Send(Flow.from_json(d["flow"]))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Send'):
+    if (not isinstance(x,Send)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Send)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["flow"] = Flow.to_json(x.flow)
     return d
@@ -370,7 +400,9 @@ class Var(Expr):
     return Var(Variable.from_json(d["var"]))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Var'):
+    if (not isinstance(x,Var)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Var)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["var"] = Variable.to_json(x.var)
     return d
@@ -388,7 +420,9 @@ class Arithmetic2(Expr):
     return Arithmetic2(Expr.from_json(d["lhs"]), Arithmetic.from_json(d["operation"]), Expr.from_json(d["rhs"]))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Arithmetic2'):
+    if (not isinstance(x,Arithmetic2)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Arithmetic2)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["lhs"] = Expr.to_json(x.lhs)
     d["operation"] = Arithmetic.to_json(x.operation)
@@ -407,7 +441,9 @@ class Flow():
     return Flow(None if d["target"] == None else Expr.from_json(d["target"]), Token.from_json(d["token"]))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Flow'):
+    if (not isinstance(x,Flow)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Flow)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["target"] = None if x.target == None else Expr.to_json(x.target)
     d["token"] = Token.to_json(x.token)
@@ -437,7 +473,9 @@ class Intent():
         return Signature.from_json(d)
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Intent'):
+    if (not isinstance(x,Intent)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Intent)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     match x:
       case All():
         d = {"tag" : "All"} | All.to_json(x)
@@ -475,7 +513,9 @@ class All(Intent):
     return All(list(map(Intent.from_json, d["children"])))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'All'):
+    if (not isinstance(x,All)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(All)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["children"] = list(map(Intent.to_json, x.children))
     return d
@@ -492,7 +532,9 @@ class Any(Intent):
     return Any(d["threshold"], list(map(Intent.from_json, d["children"])))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Any'):
+    if (not isinstance(x,Any)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Any)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["threshold"] = x.threshold
     d["children"] = list(map(Intent.to_json, x.children))
@@ -511,7 +553,9 @@ class Restriction(Intent):
     return Restriction(Expr.from_json(d["lhs"]), Relation.from_json(d["relation"]), Expr.from_json(d["rhs"]))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Restriction'):
+    if (not isinstance(x,Restriction)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Restriction)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["lhs"] = Expr.to_json(x.lhs)
     d["relation"] = Relation.to_json(x.relation)
@@ -530,7 +574,9 @@ class Finite(Intent):
     return Finite(d["uses"], Intent.from_json(d["inner"]))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Finite'):
+    if (not isinstance(x,Finite)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Finite)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["uses"] = x.uses
     d["inner"] = Intent.to_json(x.inner)
@@ -549,7 +595,9 @@ class Temporary(Intent):
     return Temporary(d["duration"], d["availableAfter"], Intent.from_json(d["inner"]))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Temporary'):
+    if (not isinstance(x,Temporary)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Temporary)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["duration"] = x.duration
     d["availableAfter"] = x.availableAfter
@@ -567,7 +615,9 @@ class Signature(Intent):
     return Signature(d["signer"])
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Signature'):
+    if (not isinstance(x,Signature)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Signature)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["signer"] = x.signer
     return d
@@ -588,7 +638,9 @@ class BridgeInstruction():
         return Mint.from_json(d)
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'BridgeInstruction'):
+    if (not isinstance(x,BridgeInstruction)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(BridgeInstruction)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     match x:
       case Burn():
         d = {"tag" : "Burn"} | Burn.to_json(x)
@@ -609,7 +661,9 @@ class Burn(BridgeInstruction):
     return Burn(Token.from_json(d["token"]), d["amount"])
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Burn'):
+    if (not isinstance(x,Burn)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Burn)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["token"] = Token.to_json(x.token)
     d["amount"] = x.amount
@@ -628,7 +682,9 @@ class Mint(BridgeInstruction):
     return Mint(d["prover"], Token.from_json(d["token"]), d["amount"])
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Mint'):
+    if (not isinstance(x,Mint)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Mint)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["prover"] = x.prover
     d["token"] = Token.to_json(x.token)
@@ -657,7 +713,9 @@ class Instruction():
         return Bridge.from_json(d)
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Instruction'):
+    if (not isinstance(x,Instruction)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Instruction)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     match x:
       case TransferFunds():
         d = {"tag" : "TransferFunds"} | TransferFunds.to_json(x)
@@ -688,7 +746,9 @@ class TransferFunds(Instruction):
     return TransferFunds(d["source"], d["target"], dict(d["funds"]))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'TransferFunds'):
+    if (not isinstance(x,TransferFunds)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(TransferFunds)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["source"] = x.source
     d["target"] = x.target
@@ -707,7 +767,9 @@ class OrIntent(Instruction):
     return OrIntent(d["host"], Intent.from_json(d["intent"]))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'OrIntent'):
+    if (not isinstance(x,OrIntent)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(OrIntent)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["host"] = x.host
     d["intent"] = Intent.to_json(x.intent)
@@ -725,7 +787,9 @@ class SetIntent(Instruction):
     return SetIntent(d["host"], Intent.from_json(d["intent"]))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'SetIntent'):
+    if (not isinstance(x,SetIntent)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(SetIntent)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["host"] = x.host
     d["intent"] = Intent.to_json(x.intent)
@@ -742,7 +806,9 @@ class Delete(Instruction):
     return Delete(d["host"])
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Delete'):
+    if (not isinstance(x,Delete)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Delete)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["host"] = x.host
     return d
@@ -759,7 +825,9 @@ class Bridge(Instruction):
     return Bridge(d["bridgedAccount"], BridgeInstruction.from_json(d["instruction"]))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Bridge'):
+    if (not isinstance(x,Bridge)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Bridge)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["bridgedAccount"] = x.bridgedAccount
     d["instruction"] = BridgeInstruction.to_json(x.instruction)
@@ -776,7 +844,9 @@ class Transaction():
     return Transaction(NonEmpty.from_list(list(map(Instruction.from_json, (d["instructions"])))))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Transaction'):
+    if (not isinstance(x,Transaction)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Transaction)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["instructions"] = list(map(Instruction.to_json, x.instructions.list))
     return d
@@ -795,7 +865,9 @@ class Signed():
     return Signed(d["nonce"], d["signature"], Transaction.from_json(d["signee"]), NonEmpty.from_list((d["signers"])))
 
   @staticmethod
-  def to_json(x):
+  def to_json(x: 'Signed'):
+    if (not isinstance(x,Signed)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Signed)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
     d["nonce"] = x.nonce
     d["signature"] = x.signature
