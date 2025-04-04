@@ -365,11 +365,13 @@ class Client:
         """Get block at specified height or latest if not specified."""
         params = {}
         if height is not None:
-            params["height"] = height
+            # Convert height to string as expected by Tendermint RPC for numeric params
+            params["height"] = str(height)
         return await self._make_request_async("block", params)
 
     def get_block_sync(self, height: Optional[int] = None) -> Dict[str, Any]:
         """Synchronous wrapper for get_block."""
+        # Ensure the async version is called correctly
         return self._run_async(self.get_block(height))
 
     async def get_current_block(self) -> Dict[str, Any]:
