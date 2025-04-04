@@ -165,10 +165,6 @@ Attributes:
     flow: The token flow specification
 """
 
-ORACLE_DOC = """
-An expression that gets its value from an oracle.
-"""
-
 VAR_DOC = """
 A variable reference expression.
 """
@@ -240,14 +236,6 @@ An intent that requires a specific signature.
 
 Attributes:
     signer: The public key of the required signer
-"""
-
-RIGHTS_DOC = """
-An intent related to access rights.
-"""
-
-ISSUANCE_DOC = """
-An intent related to token issuance.
 """
 
 # Bridge instruction documentation
@@ -406,4 +394,4 @@ Args:
 
 Returns:
     True if all roundtrips are successful, False otherwise
-""" 
+"""

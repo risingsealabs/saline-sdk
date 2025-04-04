@@ -207,8 +207,6 @@ class Expr():
         return Receive.from_json(d)
       case "Send":
         return Send.from_json(d)
-      case "Oracle":
-        return Oracle.from_json(d)
       case "Var":
         return Var.from_json(d)
       case "Arithmetic2":
@@ -229,9 +227,6 @@ class Expr():
       case Send():
         d = {"tag" : "Send"} | Send.to_json(x)
         return dict(sorted(d.items()))
-      case Oracle():
-        d = {"tag" : "Oracle"} | Oracle.to_json(x)
-        return dict(sorted(d.items()))
       case Var():
         d = {"tag" : "Var"} | Var.to_json(x)
         return dict(sorted(d.items()))
@@ -247,7 +242,7 @@ class Expr():
   def __mul__(self, other):
     if (isinstance(other, int) | isinstance(other, float)):
       other = Lit(other)
-    return Arithmetic2(self, Arithmetic.Mul, other)
+    return Arithmetic2(Arithmetic.Mul, self, other)
 
   def __gt__(self, other):
     if (isinstance(other, int) | isinstance(other, float)):
@@ -334,26 +329,6 @@ class Send(Expr):
     return d
 
 
-class Oracle(Expr):
-  def __init__(self, address: G2Element, var: Variable, timestamp: int):
-    super().__init__()
-    self.address = address
-    self.var = var
-    self.timestamp = timestamp
-
-  @staticmethod
-  def from_json(d):
-    return Oracle(d["address"], Variable.from_json(d["var"]), d["timestamp"])
-
-  @staticmethod
-  def to_json(x):
-    d = dict()
-    d["address"] = x.address
-    d["var"] = Variable.to_json(x.var)
-    d["timestamp"] = x.timestamp
-    return d
-
-
 class Var(Expr):
   def __init__(self, var: Variable):
     super().__init__()
@@ -429,10 +404,6 @@ class Intent():
         return Temporary.from_json(d)
       case "Signature":
         return Signature.from_json(d)
-      case "Rights":
-        return Rights.from_json(d)
-      case "Issuance":
-        return Issuance.from_json(d)
 
   @staticmethod
   def to_json(x):
@@ -454,12 +425,6 @@ class Intent():
         return dict(sorted(d.items()))
       case Signature():
         d = {"tag" : "Signature"} | Signature.to_json(x)
-        return dict(sorted(d.items()))
-      case Rights():
-        d = {"tag" : "Rights"} | Rights.to_json(x)
-        return dict(sorted(d.items()))
-      case Issuance():
-        d = {"tag" : "Issuance"} | Issuance.to_json(x)
         return dict(sorted(d.items()))
 
   def __and__(self, other):
@@ -574,34 +539,6 @@ class Signature(Intent):
   def to_json(x):
     d = dict()
     d["signer"] = x.signer
-    return d
-
-
-class Rights(Intent):
-  def __init__(self):
-    pass
-
-  @staticmethod
-  def from_json(d):
-    return Rights()
-
-  @staticmethod
-  def to_json(x):
-    d = dict()
-    return d
-
-
-class Issuance(Intent):
-  def __init__(self):
-    pass
-
-  @staticmethod
-  def from_json(d):
-    return Issuance()
-
-  @staticmethod
-  def to_json(x):
-    d = dict()
     return d
 
 

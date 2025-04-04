@@ -35,14 +35,14 @@ except ImportError:
 try:
     from saline_sdk.transaction.bindings_docstrings import *
     BINDINGS_DOCSTRINGS_AVAILABLE = True
-    
+
     # Import bindings module
     import saline_sdk.transaction.bindings as bindings
-    
+
     # Add module docstring
     if BINDINGS_MODULE_DOC:
         bindings.__doc__ = BINDINGS_MODULE_DOC
-    
+
     # Apply docstrings to NonEmpty class and methods
     if hasattr(bindings, 'NonEmpty'):
         bindings.NonEmpty.__doc__ = NON_EMPTY_DOC
@@ -54,7 +54,7 @@ try:
             bindings.NonEmpty.to_json.__doc__ = NON_EMPTY_TO_JSON_DOC
         if hasattr(bindings.NonEmpty, 'from_json'):
             bindings.NonEmpty.from_json.__doc__ = NON_EMPTY_FROM_JSON_DOC
-    
+
     # Apply docstrings to enum classes
     if hasattr(bindings, 'Relation'):
         bindings.Relation.__doc__ = RELATION_DOC
@@ -62,7 +62,7 @@ try:
         bindings.Token.__doc__ = TOKEN_DOC
     if hasattr(bindings, 'Arithmetic'):
         bindings.Arithmetic.__doc__ = ARITHMETIC_DOC
-    
+
     # Apply docstrings to witness classes
     if hasattr(bindings, 'Witness'):
         bindings.Witness.__doc__ = WITNESS_DOC
@@ -72,7 +72,7 @@ try:
         bindings.AnyW.__doc__ = ANYW_DOC
     if hasattr(bindings, 'AutoW'):
         bindings.AutoW.__doc__ = AUTOW_DOC
-    
+
     # Apply docstrings to expression classes
     if hasattr(bindings, 'Expr'):
         bindings.Expr.__doc__ = EXPR_DOC
@@ -82,19 +82,17 @@ try:
         bindings.Receive.__doc__ = RECEIVE_DOC
     if hasattr(bindings, 'Send'):
         bindings.Send.__doc__ = SEND_DOC
-    if hasattr(bindings, 'Oracle'):
-        bindings.Oracle.__doc__ = ORACLE_DOC
     if hasattr(bindings, 'Var'):
         bindings.Var.__doc__ = VAR_DOC
     if hasattr(bindings, 'Arithmetic2'):
         bindings.Arithmetic2.__doc__ = ARITHMETIC2_DOC
     if hasattr(bindings, 'Cast'):
         bindings.Cast.__doc__ = CAST_DOC
-    
+
     # Apply docstrings to Flow class
     if hasattr(bindings, 'Flow'):
         bindings.Flow.__doc__ = FLOW_DOC
-    
+
     # Apply docstrings to intent classes
     if hasattr(bindings, 'Intent'):
         bindings.Intent.__doc__ = INTENT_DOC
@@ -108,11 +106,7 @@ try:
         bindings.Limited.__doc__ = LIMITED_DOC
     if hasattr(bindings, 'Signature'):
         bindings.Signature.__doc__ = SIGNATURE_DOC
-    if hasattr(bindings, 'Rights'):
-        bindings.Rights.__doc__ = RIGHTS_DOC
-    if hasattr(bindings, 'Issuance'):
-        bindings.Issuance.__doc__ = ISSUANCE_DOC
-    
+
     # Apply docstrings to bridge instruction classes
     if hasattr(bindings, 'BridgeInstruction'):
         bindings.BridgeInstruction.__doc__ = BRIDGE_INSTRUCTION_DOC
@@ -120,12 +114,10 @@ try:
         bindings.Burn.__doc__ = BURN_DOC
     if hasattr(bindings, 'Mint'):
         bindings.Mint.__doc__ = MINT_DOC
-    
+
     # Apply docstrings to instruction classes
     if hasattr(bindings, 'Instruction'):
         bindings.Instruction.__doc__ = INSTRUCTION_DOC
-    if hasattr(bindings, 'Issue'):
-        bindings.Issue.__doc__ = ISSUE_DOC
     if hasattr(bindings, 'TransferRights'):
         bindings.TransferRights.__doc__ = TRANSFER_RIGHTS_DOC
     if hasattr(bindings, 'TransferFunds'):
@@ -138,13 +130,13 @@ try:
         bindings.Delete.__doc__ = DELETE_DOC
     if hasattr(bindings, 'Bridge'):
         bindings.Bridge.__doc__ = BRIDGE_DOC
-    
+
     # Apply docstrings to transaction classes
     if hasattr(bindings, 'Transaction'):
         bindings.Transaction.__doc__ = TRANSACTION_DOC
     if hasattr(bindings, 'Signed'):
         bindings.Signed.__doc__ = SIGNED_DOC
-    
+
     # Apply docstrings to utility functions
     if hasattr(bindings, 'dumps'):
         bindings.dumps.__doc__ = DUMPS_DOC

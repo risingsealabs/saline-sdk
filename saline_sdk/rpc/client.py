@@ -34,7 +34,7 @@ import aiohttp
 import asyncio
 import requests
 from saline_sdk.rpc.error import RPCError
-from saline_sdk.transaction.bindings import Intent, All, Any, Finite, Temporary, Signature, Rights, Issuance, Lit, Restriction, Relation, Token as SDKToken
+from saline_sdk.transaction.bindings import Intent, All, Any, Finite, Temporary, Signature, Lit, Restriction, Relation, Token as SDKToken
 
 # Type for tokens
 from enum import Enum
@@ -715,7 +715,7 @@ class Client:
 
         This method queries the node for all registered intents and parses them into
         specialized Intent objects from the SDK. It handles various intent types including
-        All, Any, Restriction, Finite, Temporary, Signature, Rights, and Issuance intents.
+        All, Any, Restriction, Finite, Temporary and Signature intents.
 
         Returns:
             Dictionary mapping intent identifiers to objects containing:
@@ -832,7 +832,7 @@ class Client:
 
         This method queries the node for all registered intents and parses them into
         specialized Intent objects from the SDK. It handles various intent types including
-        All, Any, Restriction, Finite, Temporary, Signature, Rights, and Issuance intents.
+        All, Any, Restriction, Finite, Temporary and Signature intents.
 
         Returns:
             Dictionary mapping intent identifiers to objects containing:

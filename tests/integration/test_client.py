@@ -9,7 +9,7 @@ import pytest
 import json
 from saline_sdk.rpc.client import Client, Token
 from saline_sdk.transaction.bindings import (
-    Intent, All, Any, Finite, Temporary, Signature, Rights, Issuance,
+    Intent, All, Any, Finite, Temporary, Signature,
     Lit, Restriction, Relation, Token as SDKToken
 )
 
@@ -59,13 +59,7 @@ def display_intent_details(intent, indent=0, max_depth=3):
 
     elif isinstance(intent, Signature):
         print(" " * indent + f"  Signature intent for public key: {intent.signer}")
-    
-    elif isinstance(intent, Rights):
-        print(" " * indent + f"  Rights intent")
-    
-    elif isinstance(intent, Issuance):
-        print(" " * indent + f"  Issuance intent")
-    
+
     elif isinstance(intent, Restriction):
         lhs_str = str(intent.lhs) if hasattr(intent, 'lhs') else "Unknown"
         relation_str = str(intent.relation) if hasattr(intent, 'relation') else "Unknown"
