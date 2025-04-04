@@ -489,19 +489,29 @@ class Client:
         self._debug_log(f"Querying balance for {address}, token: {token}")
 
         try:
-            data = [address, token]
-            json_data = json.dumps(data)
+            # Use wallet_info query instead of direct balance query
+            wallet_info = await self.get_wallet_info_async(address)
+            balances = wallet_info.get('balances', [])
 
-            hex_data = self._hex_encode_data(json_data)
-
-            response = await self.abci_query_async("/store/balance", f'"{hex_data}"')
-
-            code, decoded_str, json_value = self._process_response(response)
-
-            if json_value is not None:
-                return float(json_value)
-
-            return None
+            # Process the balances based on their format
+            if isinstance(balances, dict):
+                # If balances is a dictionary, just return the value for the token
+                return float(balances.get(token, 0))
+            
+            # If balances is a list, search for the token
+            for balance_item in balances:
+                if isinstance(balance_item, list) and len(balance_item) >= 2:
+                    bal_token, amount = balance_item[0], balance_item[1]
+                    if bal_token == token:
+                        return float(amount)
+                elif isinstance(balance_item, dict):
+                    bal_token = balance_item.get('token')
+                    amount = balance_item.get('amount')
+                    if bal_token == token and amount is not None:
+                        return float(amount)
+            
+            # Token not found in balances
+            return 0.0
         except Exception as e:
             self._debug_log(f"Error querying balance: {e}")
             return None
@@ -517,38 +527,7 @@ class Client:
         Returns:
             Balance amount or None if not found
         """
-        self._debug_log(f"Querying balance for {address}, token: {token}")
-
-        try:
-            url = f"{self.http_url}/abci_query"
-
-            data = [address, token]
-            json_data = json.dumps(data)
-
-            hex_data = self._hex_encode_data(json_data)
-
-            params = {
-                "path": json.dumps("/store/balance"),
-                "data": f'"{hex_data}"',
-                "height": "0",
-                "prove": "false"
-            }
-
-            self._debug_log(f"Balance query URL parameters: {params}")
-
-            response = requests.get(url, params=params)
-            response.raise_for_status()
-            result = response.json()
-
-            code, decoded_str, json_value = self._process_response(result)
-
-            if json_value is not None:
-                return float(json_value)
-
-            return None
-        except Exception as e:
-            self._debug_log(f"Error querying balance: {e}")
-            return None
+        return self._run_async(self.get_balance_async(address, token))
 
     async def get_all_balances_async(self, address: str) -> Dict[str, float]:
         """
@@ -560,14 +539,35 @@ class Client:
         Returns:
             Dictionary mapping token symbols to balances
         """
-        balances = {}
-
-        for token in Token:
-            balance = await self.get_balance_async(address, token.value)
-            if balance is not None:
-                balances[token.value] = balance
-
-        return balances
+        try:
+            # Get all balances in one query using wallet_info
+            wallet_info = await self.get_wallet_info_async(address)
+            balances = wallet_info.get('balances', [])
+            
+            # Convert to a standard dictionary format
+            balance_dict = {}
+            
+            # Process the balances based on their format
+            if isinstance(balances, dict):
+                # If it's already a dictionary, just convert values to float
+                for token, amount in balances.items():
+                    balance_dict[token] = float(amount)
+            else:
+                # If it's a list, process each balance item
+                for balance_item in balances:
+                    if isinstance(balance_item, list) and len(balance_item) >= 2:
+                        token, amount = balance_item[0], balance_item[1]
+                        balance_dict[token] = float(amount)
+                    elif isinstance(balance_item, dict):
+                        token = balance_item.get('token')
+                        amount = balance_item.get('amount')
+                        if token and amount is not None:
+                            balance_dict[token] = float(amount)
+            
+            return balance_dict
+        except Exception as e:
+            self._debug_log(f"Error getting all balances: {e}")
+            return {}
 
     def get_all_balances(self, address: str) -> Dict[str, float]:
         """

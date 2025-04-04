@@ -1,11 +1,11 @@
 """
-RPC module for Saline SDK.
+RPC client for interacting with Saline nodes.
 
-Provides client implementations for interacting with Saline nodes.
+This package provides utilities for interacting with Saline nodes via RPC.
 """
 
-from .client import Client
-from .error import RPCError
+from saline_sdk.rpc.client import Client
+from saline_sdk.rpc.error import RPCError
 
 __all__ = [
     'Client',

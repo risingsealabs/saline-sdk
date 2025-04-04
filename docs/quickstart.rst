@@ -191,3 +191,44 @@ Working with Token Swaps
     )
     
     # The rest of the signing and submission process is the same as above 
+
+Using the Testnet Faucet
+--------------------
+
+The SDK includes utilities for obtaining tokens from the testnet faucet:
+
+.. code-block:: python
+
+    import asyncio
+    from saline_sdk.account import Account
+    from saline_sdk.rpc.client import Client
+    from saline_sdk.rpc.testnet.faucet import top_up_from_faucet
+    
+    async def get_testnet_tokens():
+        # Create account and client
+        account = Account.create()
+        alice = account.create_subaccount(label="alice")
+        client = Client(http_url="http://localhost:26657")
+        
+        # Request tokens directly for a subaccount
+        alice_balances = await top_up_from_faucet(
+            account=alice,  # Pass Subaccount directly
+            client=client
+        )
+        print(f"Alice balances: {alice_balances}")
+        
+        # Or use account with default subaccount
+        bob = account.create_subaccount(label="bob")
+        account.set_default_subaccount("bob")
+        
+        # Request specific token amounts
+        bob_balances = await top_up_from_faucet(
+            account=account,  # Uses default subaccount
+            client=client,
+            tokens={"BTC": 0.5, "ETH": 5},
+            use_dynamic_amounts=False  # Use our specified amounts
+        )
+        print(f"Bob balances: {bob_balances}")
+    
+    # Run the async function
+    asyncio.run(get_testnet_tokens()) 

@@ -31,6 +31,9 @@ from .transaction.instructions import transfer, swap, set_intent
 # Common token enum
 from .rpc.client import Token
 
+# Testnet utilities - New import location
+from .rpc.testnet.faucet import top_up_from_faucet
+
 __all__ = [
     # Core interfaces
     'Saline',       # Main interface to Saline network
@@ -46,6 +49,9 @@ __all__ = [
     'transfer',     # Transfer instruction
     'swap',         # Swap instruction
     'set_intent',   # Intent creation
+    
+    # Testnet utilities
+    'top_up_from_faucet',         # Async faucet utility
 ]
 
 __version__ = '0.1.0'

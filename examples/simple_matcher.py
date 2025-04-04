@@ -54,7 +54,7 @@ async def create_accounts_with_swap_intents(client: Client, root_account: Accoun
         want_amount = config["want_amount"]
         
         # Create subaccount
-        account = root_account.create_subaccount(name=name)
+        account = root_account.create_subaccount(label=name)
         accounts[name] = account
         
         # "I'll send give_token if I receive want_token"
@@ -170,7 +170,7 @@ async def main():
 
     root = Account.from_mnemonic(TEST_MNEMONIC)
 
-    matcher = root.create_subaccount(name="matcher")
+    matcher = root.create_subaccount(label="matcher")
     print(f"Created dedicated matcher account: {matcher.public_key[:10]}...")
     
     

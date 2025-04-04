@@ -12,6 +12,15 @@ from datetime import datetime
 # Add the project root to the path so we can import the package
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+# Setup mock modules for ReadTheDocs build
+try:
+    import mock
+    # Import our mock modules script
+    from docs import mock_modules
+    print("Using mock modules for documentation build.")
+except ImportError:
+    print("Mock modules not used - assuming full environment is available.")
+
 # -- Apply docstrings to bindings.py ---------------------------------------
 
 # Check if the saline_sdk package is available

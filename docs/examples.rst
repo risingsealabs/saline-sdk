@@ -44,7 +44,7 @@ This example demonstrates how to create and submit a basic transfer transaction.
 
         rpc = Client(http_url=RPC_URL)
         # Submit transaction and wait for validation
-        result = await rpc.tx_broadcast(prepareSimpleTx(sender,tx))
+        result = await rpc.tx_commit(prepareSimpleTx(sender,tx))
         print(f"\nRPC response: {json.dumps(result, indent=2)}")
 
 Token Swap
@@ -182,6 +182,128 @@ See ``examples/install_multisig_intent.py``.
         result = await rpc.tx_commit(signed_tx)
         return result
 
+Restrictive Intent
+===============
+
+This example demonstrates creating a restrictive intent that only allows receiving BTC from a specific counterparty.
+This pattern is useful for security-sensitive wallets or accounts that need tight control over incoming transfers.
+See ``examples/restrictive_intent.py``.
+
+Simple Restriction Example
+==================
+
+This simplified example demonstrates how to create a restrictive intent that only allows receiving SALT tokens
+from a specific trusted sender address. This creates a highly restricted wallet for secure custody.
+See ``examples/simple_restriction.py``.
+
+.. code-block:: python
+
+    from saline_sdk.account import Account
+    from saline_sdk.transaction.bindings import Flow, NonEmpty, Receive, SetIntent, Transaction, TransferFunds
+    from saline_sdk.transaction.tx import prepareSimpleTx
+    from saline_sdk.rpc.client import Client, Token
+    import asyncio
+    from saline_sdk.rpc.testnet.faucet import top_up_from_faucet
+
+    async def main():
+        root_account = Account.from_mnemonic(PERSISTENT_MNEMONIC)
+        wallet = root_account.create_subaccount(label="restricted_wallet")
+        trusted = root_account.create_subaccount(label="trusted_sender")
+        untrusted = root_account.create_subaccount(label="untrusted_sender")
+        
+        rpc = Client(http_url=RPC_URL)
+
+        # Fund the test accounts
+        await top_up_from_faucet(account=trusted, client=rpc)
+        await top_up_from_faucet(account=untrusted, client=rpc)
+
+        # Clear any existing intent
+        clear_tx = Transaction(instructions=NonEmpty.from_list([
+            SetIntent(wallet.public_key, None)
+        ]))
+        await rpc.tx_commit(prepareSimpleTx(wallet, clear_tx))
+        
+        # Set restrictive intent - only allow receiving SALT from trusted sender
+        restricted_intent = Receive(Flow(trusted.public_key, Token.SALT))
+        set_intent = SetIntent(wallet.public_key, restricted_intent)
+        tx = Transaction(instructions=NonEmpty.from_list([set_intent]))
+        await rpc.tx_commit(prepareSimpleTx(wallet, tx))
+
+        # Test transactions against the intent:
+        
+        # Test 1: SALT from trusted sender (should pass)
+        transfer1 = TransferFunds(
+            source=trusted.public_key,
+            target=wallet.public_key,
+            funds={"SALT": 15}
+        )
+        tx1 = Transaction(instructions=NonEmpty.from_list([transfer1]))
+        await rpc.tx_commit(prepareSimpleTx(trusted, tx1))
+        
+        # Test 2: SALT from untrusted sender (should fail)
+        transfer2 = TransferFunds(
+            source=untrusted.public_key,
+            target=wallet.public_key,
+            funds={"SALT": 15}
+        )
+        tx2 = Transaction(instructions=NonEmpty.from_list([transfer2]))
+        await rpc.tx_commit(prepareSimpleTx(untrusted, tx2))
+        
+        # Test 3: USDC from trusted sender (should fail)
+        transfer3 = TransferFunds(
+            source=trusted.public_key,
+            target=wallet.public_key,
+            funds={"USDC": 10}
+        )
+        tx3 = Transaction(instructions=NonEmpty.from_list([transfer3]))
+        await rpc.tx_commit(prepareSimpleTx(trusted, tx3))
+
+Testnet Faucet with Swap Intent
+==============================
+
+This example demonstrates how to request tokens from the testnet faucet and create matching swap intents.
+See ``examples/faucet_and_swap_intent.py``.
+
+.. code-block:: python
+
+    import asyncio
+    import json
+    from saline_sdk.account import Account
+    from saline_sdk.transaction.bindings import (
+        NonEmpty, Transaction, SetIntent, TransferFunds,
+        Send, Receive, Flow, Token
+    )
+    from saline_sdk.transaction.tx import prepareSimpleTx
+    from saline_sdk.rpc.client import Client
+    from saline_sdk.rpc.testnet.faucet import top_up_from_faucet
+
+    async def create_swap_match():
+        # Create account and client
+        root_account = Account.create()
+        alice = root_account.create_subaccount(name="alice")
+        bob = root_account.create_subaccount(name="bob")
+        matcher = root_account.create_subaccount(name="matcher")
+        
+        rpc = Client(http_url=RPC_URL)
+        
+        # Request tokens for Alice and Bob directly
+        print("Requesting tokens from the faucet...")
+        await top_up_from_faucet(account=alice, client=rpc)
+        await top_up_from_faucet(account=bob, client=rpc)
+        
+        # Create matching swap intents
+        alice_intent = Send(Flow(None, Token["USDT"])) * 10 <= Receive(Flow(None, Token["BTC"])) * 0.001
+        bob_intent = Send(Flow(None, Token["BTC"])) * 0.001 <= Receive(Flow(None, Token["USDT"])) * 10
+        
+        # Set up the intents on the blockchain
+        # [...]
+        
+        # Execute the swap match using the matcher account
+        # [...]
+        
+        # Show balances before and after the swap
+        # [...]
+
 Additional Examples
 =================
 
@@ -191,3 +313,47 @@ The SDK repository contains additional example files demonstrating more advanced
 2. ``intent_queries_example.py`` - Querying the blockchain for intent information 
 3. ``simple_matcher.py`` - Implementing a matching engine for swap intents
 4. ``fulfill_faucet_intent.py`` - Interacting with faucet intents to obtain tokens 
+5. ``restrictive_intent.py`` - Creating a wallet that only accepts BTC from specific sources
+6. ``faucet_and_swap_intent.py`` - Requesting testnet tokens and creating swap intents
+
+Using the Testnet Module
+=================
+
+The Saline SDK includes a testnet module for development purposes. The faucet functionality has been moved to ``saline_sdk.rpc.testnet.faucet``:
+
+.. code-block:: python
+
+    from saline_sdk.account import Account
+    from saline_sdk.rpc.client import Client
+    from saline_sdk.rpc.testnet.faucet import top_up_from_faucet
+    
+    async def request_testnet_tokens():
+        # Create an account
+        account = Account.create()
+        alice = account.create_subaccount(name="alice")
+        
+        # Create a client
+        client = Client(http_url="http://localhost:26657")
+        
+        # Request tokens from the testnet faucet
+        # The function now accepts both Account and Subaccount objects directly
+        print("Requesting tokens directly for a subaccount...")
+        new_balances = await top_up_from_faucet(
+            account=alice,  # Can pass Subaccount directly
+            client=client,
+            use_dynamic_amounts=True  # Get the amounts defined in the faucet intent
+        )
+        
+        print(f"New balances: {new_balances}")
+        
+        # Or you can use the root account with default subaccount
+        print("Requesting tokens for default subaccount...")
+        account.set_default_subaccount("alice")
+        custom_balances = await top_up_from_faucet(
+            account=account,  # Using Account with default subaccount
+            client=client,
+            tokens={"BTC": 0.5, "ETH": 5, "USDC": 500},
+            use_dynamic_amounts=False  # Use our specified amounts
+        )
+        
+        print(f"Updated balances with custom amounts: {custom_balances}") 

@@ -54,6 +54,27 @@ subaccount = saline.account.create_subaccount("my_subaccount")
 print(f"Subaccount public key: {subaccount.public_key}")
 ```
 
+### Using the Testnet Faucet
+
+```python
+from saline_sdk.rpc.client import Client
+from saline_sdk.rpc.testnet.faucet import top_up_from_faucet
+import asyncio
+
+async def get_testnet_tokens():
+    # Create a client
+    client = Client(http_url="http://localhost:26657")
+    
+    # Get tokens for a subaccount directly
+    await top_up_from_faucet(account=subaccount, client=client)
+    
+    # Or use the root account with default subaccount
+    await top_up_from_faucet(account=saline.account, client=client)
+
+# Run the async function
+asyncio.run(get_testnet_tokens())
+```
+
 ### Check Balances
 
 ```python

@@ -124,14 +124,14 @@ class Account:
 
     def create_subaccount(
         self,
-        name: str,
+        label: str,
         path: Optional[str] = None
     ) -> Subaccount:
         """
         Create a new subaccount.
 
         Args:
-            name: Subaccount name
+            label: Subaccount label
             path: Optional derivation path (default: m/12381/997/0/0/{next_index})
 
         Returns:
@@ -143,8 +143,8 @@ class Account:
         if self._seed is None:
             raise ValueError("Account not initialized with mnemonic")
 
-        if name in self._subaccounts:
-            raise ValueError(f"Subaccount '{name}' already exists")
+        if label in self._subaccounts:
+            raise ValueError(f"Subaccount '{label}' already exists")
 
         # Generate default path if none provided
         if path is None:
@@ -154,23 +154,23 @@ class Account:
 
         # Create subaccount
         private_key = derive_key_from_path(self._seed, path)
-        subaccount = Subaccount(private_key, path=path, label=name)
+        subaccount = Subaccount(private_key, path=path, label=label)
 
         # Store subaccount
-        self._subaccounts[name] = subaccount
+        self._subaccounts[label] = subaccount
 
         # Set as default if first subaccount
         if self.default_subaccount is None:
-            self.default_subaccount = name
+            self.default_subaccount = label
 
         return subaccount
 
-    def get_subaccount(self, name: str) -> Subaccount:
+    def get_subaccount(self, label: str) -> Subaccount:
         """
-        Get a subaccount by name.
+        Get a subaccount by label.
 
         Args:
-            name: Subaccount name
+            label: Subaccount label
 
         Returns:
             Subaccount instance
@@ -178,9 +178,9 @@ class Account:
         Raises:
             KeyError: If subaccount not found
         """
-        if name not in self._subaccounts:
-            raise KeyError(f"Subaccount '{name}' not found")
-        return self._subaccounts[name]
+        if label not in self._subaccounts:
+            raise KeyError(f"Subaccount '{label}' not found")
+        return self._subaccounts[label]
 
     def list_subaccounts(self) -> Dict[str, str]:
         """
@@ -189,21 +189,21 @@ class Account:
         Returns:
             Dict mapping subaccount names to public keys
         """
-        return {name: acc.public_key for name, acc in self._subaccounts.items()}
+        return {label: acc.public_key for label, acc in self._subaccounts.items()}
 
-    def set_default_subaccount(self, name: str) -> None:
+    def set_default_subaccount(self, label: str) -> None:
         """
         Set the default subaccount.
 
         Args:
-            name: Subaccount name
+            label: Subaccount label
 
         Raises:
             KeyError: If subaccount not found
         """
-        if name not in self._subaccounts:
-            raise KeyError(f"Subaccount '{name}' not found")
-        self.default_subaccount = name
+        if label not in self._subaccounts:
+            raise KeyError(f"Subaccount '{label}' not found")
+        self.default_subaccount = label
 
     def transfer(
         self,

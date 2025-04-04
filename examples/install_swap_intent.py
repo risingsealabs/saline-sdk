@@ -19,7 +19,7 @@ RPC_URL = "http://localhost:26657"
 
 async def create_swap_intent():
     root_account = Account.from_mnemonic(TEST_MNEMONIC)
-    alice = root_account.create_subaccount(name="alice")
+    alice = root_account.create_subaccount(label="alice")
     rpc = Client(http_url=RPC_URL)
 
     

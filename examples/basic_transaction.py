@@ -14,8 +14,8 @@ async def main():
     account = Account.from_mnemonic(TEST_MNEMONIC)
 
     # Derive subaccounts for sender and receiver
-    sender = account.create_subaccount(name="sender")
-    receiver = account.create_subaccount(name="receiver")
+    sender = account.create_subaccount(label="sender")
+    receiver = account.create_subaccount(label="receiver")
 
     transfer_instruction = transfer(
         sender=sender.public_key,
