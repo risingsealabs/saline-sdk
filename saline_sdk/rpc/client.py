@@ -371,7 +371,6 @@ class Client:
 
     def get_block_sync(self, height: Optional[int] = None) -> Dict[str, Any]:
         """Synchronous wrapper for get_block."""
-        # Ensure the async version is called correctly
         return self._run_async(self.get_block(height))
 
     async def get_current_block(self) -> Dict[str, Any]:

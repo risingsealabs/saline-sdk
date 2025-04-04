@@ -5,7 +5,7 @@ Intents
 Understanding the Intent System
 ==============================
 
-Intents are the cornerstone of Saline. An intent is a predicate or a series of predicates that specifies what actions an account allows to happen. Intents enable powerful patterns like account abstraction, delegation, token swaps, multi-signature authorization, time-based restrictions, and more.
+Intents are the cornerstone of Saline. An intent is a predicate or a series of predicates that specifies what actions an account allows to happen. Intents enable powerful patterns like account abstraction, delegation, token swaps, multi-signature authorization and more.
 
 Key Characteristics of Intents:
 
@@ -39,8 +39,8 @@ Actions represent operations on flows:
 - ``Send()``: Token outflow from your account
 - ``Receive()``: Token inflow to your account
 - ``Signature()``: Signature requirement
-- ``Temporary()``: Time-limited condition
-- ``Finite()``: Usage-limited condition
+.. - ``Temporary()``: Time-limited condition
+.. - ``Finite()``: Usage-limited condition
 
 Example:
 
@@ -48,7 +48,7 @@ Example:
 
     # Define a send operation for ETH to any counterparty
     Send(Flow(None, Token.ETH))
-    
+
     # Define a receive operation for USDC from a specific counterparty
     Receive(Flow("counterparty_public_key", Token.USDC))
 
@@ -82,7 +82,7 @@ The flow parameters define:
 1. **Counterparty**: The account on the other side of the transaction
    - ``None``: Any account (wildcard)
    - ``"public_key"``: A specific account
-   
+
 2. **Token**: The token type for the flow
    - ``Token.BTC``, ``Token.ETH``, etc.: Predefined token types
    - ``Token["custom_token"]``: Custom token syntax
@@ -183,35 +183,35 @@ Complete Swap Intent Example
 Advanced Intent Patterns
 ====================
 
-Time-Limited Intent
----------------
+.. Time-Limited Intent
+.. ---------------
 
-Creating an intent that expires after a specific time:
+.. Creating an intent that expires after a specific time:
 
-.. code-block:: python
+.. .. code-block:: python
 
-    # Base intent (e.g., token swap)
-    base_intent = Send(Flow(None, Token.ETH)) * 1 <= Receive(Flow(None, Token.USDT)) * 50
+..     # Base intent (e.g., token swap)
+..     base_intent = Send(Flow(None, Token.ETH)) * 1 <= Receive(Flow(None, Token.USDT)) * 50
 
-    # Set expiry time (Unix timestamp) - e.g., 1 day from now
-    import time
-    expiry_time = int(time.time()) + (24 * 60 * 60)
+..     # Set expiry time (Unix timestamp) - e.g., 1 day from now
+..     import time
+..     expiry_time = int(time.time()) + (24 * 60 * 60)
 
-    # Create a time-limited intent
-    limited_intent = Temporary(base_intent, expiry_time)
+..     # Create a time-limited intent
+..     limited_intent = Temporary(base_intent, expiry_time)
 
-Usage-Limited Intent
-----------------
+.. Usage-Limited Intent
+.. ----------------
 
-Creating an intent that can only be used a specific number of times:
+.. Creating an intent that can only be used a specific number of times:
 
-.. code-block:: python
+.. .. code-block:: python
 
-    # Base intent
-    base_intent = Send(Flow(None, Token.ETH)) * 0.1 <= Receive(Flow(None, Token.USDT)) * 5
+..     # Base intent
+..     base_intent = Send(Flow(None, Token.ETH)) * 0.1 <= Receive(Flow(None, Token.USDT)) * 5
 
-    # Create an intent limited to 5 uses
-    limited_intent = Finite(base_intent, 5)
+..     # Create an intent limited to 5 uses
+..     limited_intent = Finite(base_intent, 5)
 
 Complex Intents
 --------------------
@@ -238,4 +238,4 @@ Best Practices
 4. **Use None for counterparty when possible**: This allows for maximum interoperability
 5. **Consider adding time limits**: For sensitive operations, consider adding Temporary constraints
 
-For full details on intent operators and syntax, see :download:`Operator Syntax <operator_syntax.md>`. 
+For full details on intent operators and syntax, see :download:`Operator Syntax <operator_syntax.md>`.
