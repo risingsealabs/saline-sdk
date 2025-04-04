@@ -92,6 +92,4 @@ Utility Functions
 
 .. autofunction:: saline_sdk.transaction.bindings.dumps
 
-.. autofunction:: saline_sdk.transaction.bindings.loads
-
-.. autofunction:: saline_sdk.transaction.bindings.roundtrip 
+.. autofunction:: saline_sdk.transaction.bindings.loads 

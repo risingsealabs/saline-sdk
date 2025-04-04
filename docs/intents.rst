@@ -5,7 +5,7 @@ Intents
 Understanding the Intent System
 ==============================
 
-Intents are the cornerstone of Saline's authorization system. An intent is a predicate that specifies what actions an account allows to happen. Intents enable powerful patterns like token swaps, multi-signature authorization, time-based restrictions, and more.
+Intents are the cornerstone of Saline. An intent is a predicate or a series of predicates that specifies what actions an account allows to happen. Intents enable powerful patterns like account abstraction, delegation, token swaps, multi-signature authorization, time-based restrictions, and more.
 
 Key Characteristics of Intents:
 
@@ -213,10 +213,10 @@ Creating an intent that can only be used a specific number of times:
     # Create an intent limited to 5 uses
     limited_intent = Finite(base_intent, 5)
 
-Complex Combined Intents
+Complex Intents
 --------------------
 
-Combining multiple conditions with logical operators:
+Intents can be combined with logical operators to create more complex conditions:
 
 .. code-block:: python
 
