@@ -6,7 +6,7 @@ import pytest
 import os
 import os.path
 from unittest.mock import MagicMock, patch
-from saline_sdk.saline import Saline
+from saline_sdk import Client
 from saline_sdk.account import Account
 
 TEST_MNEMONIC = "excuse ozone east canoe duck tortoise dentist approve bid wagon area funny"
@@ -14,7 +14,7 @@ TEST_MNEMONIC = "excuse ozone east canoe duck tortoise dentist approve bid wagon
 @pytest.fixture
 def test_client():
     """Create a mock client."""
-    with patch('saline_sdk.saline.Client') as mock_client:
+    with patch('saline_sdk.rpc.client.Client') as mock_client:
         client = mock_client.return_value
         client.get_status = MagicMock(return_value={"node_info": {"version": "1.0.0"}})
         client.get_balance = MagicMock(return_value=100.0)
@@ -26,10 +26,10 @@ def test_client():
 
 @pytest.fixture
 def saline_instance(test_client):
-    """Create a Saline instance with a mock client."""
-    with patch('saline_sdk.saline.Client', return_value=test_client):
-        saline = Saline(node_url="http://fake-node:26657", mnemonic=TEST_MNEMONIC)
-        yield saline
+    """Create a Client instance with a mock client."""
+    with patch('saline_sdk.rpc.client.Client', return_value=test_client):
+        client_instance = Client(node_url="http://fake-node:26657", mnemonic=TEST_MNEMONIC)
+        yield client_instance
 
 @pytest.fixture
 def test_account():
@@ -45,10 +45,10 @@ def fixtures_path():
         'saline-sdk/tests/fixtures',
 
     ]
-    
+
     for path in possible_paths:
         if os.path.isdir(path):
             return path
-    
+
     # If no fixtures directory found, use a default path
-    return 'tests/fixtures' 
+    return 'tests/fixtures'
