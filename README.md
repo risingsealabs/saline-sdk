@@ -20,152 +20,143 @@ The Saline SDK provides a comprehensive, Web3-like interface for building applic
 
 ## Installation
 
+Requires Python 3.12+
+
 ```bash
+# Install using pip
 pip install saline-sdk
+
+# Or install using Poetry
+poetry add saline-sdk
 ```
+
+See the :doc:`docs/installation` guide for development setup.
 
 ## Quick Start
 
-### Initialize the SDK
+This provides a brief overview. See the :doc:`docs/quickstart` guide and :doc:`docs/examples` for more details.
 
-```python
-from saline_sdk import Saline
+### 1. Initialize the Client
 
-# Connect to a Saline node
-saline = Saline(node_url="http://localhost:26657")
-
-# Check connection
-if saline.is_connected():
-    print("Connected to Saline node!")
-```
-
-### Account Management
-
-```python
-# Create a new account
-mnemonic = saline.create_account()
-print(f"Save this mnemonic: {mnemonic}")
-
-# Load an existing account
-saline.load_account("your twelve word mnemonic phrase goes here")
-
-# Create a subaccount
-subaccount = saline.account.create_subaccount("my_subaccount")
-print(f"Subaccount public key: {subaccount.public_key}")
-```
-
-### Using the Testnet Faucet
+Connect to a running Saline node.
 
 ```python
 from saline_sdk.rpc.client import Client
+
+rpc_url = \"https://node0.try-saline.com\" # Your node's RPC endpoint
+client = Client(http_url=rpc_url)
+
+try:
+    status = client.get_status()
+    print(f\"Connected to Saline node: {status['node_info']['network']}!\")
+except Exception as e:
+    print(f\"Connection failed: {e}\")
+```
+
+### 2. Manage Accounts
+
+Create or load accounts to manage keys.
+
+```python
+from saline_sdk.account import Account
+
+# Create a new root account
+root_account = Account.create()
+print(f\"IMPORTANT: Save this mnemonic securely: {root_account.mnemonic}\")
+
+# Load an existing account
+# saved_mnemonic = \"your twelve word mnemonic phrase...\"
+# root_account = Account.from_mnemonic(saved_mnemonic)
+
+# Derive subaccounts (wallets)
+wallet1 = root_account.create_subaccount(label=\"wallet1\")
+print(f\"Created wallet1 with public key: {wallet1.public_key}\")
+```
+
+### 3. Check Balances
+
+Query the balance of a specific account (requires `async`).
+
+```python
+import asyncio
+
+# Assume 'client' and 'wallet1' are initialized from previous steps
+
+async def check_wallet_balance(client: Client, wallet: Account):
+    address = wallet.public_key
+    print(f\"Checking balance for {address[:10]}...\")
+    try:
+        wallet_info = await client.get_wallet_info_async(address)
+        balances = wallet_info.get('balances', []) if wallet_info else []
+        print(f\"Balances: {balances}\")
+    except Exception as e:
+        print(f\"Could not get balance: {e}\")
+
+# To run:
+# asyncio.run(check_wallet_balance(client, wallet1))
+```
+
+### 4. Use the Testnet Faucet
+
+Obtain test tokens on a test network (requires `async`).
+
+```python
+import asyncio
 from saline_sdk.rpc.testnet.faucet import top_up
-import asyncio
 
-async def get_testnet_tokens():
-    # Create a client
-    client = Client(http_url="http://localhost:26657")
+# Assume 'client' and 'wallet1' are initialized
 
-    # Get tokens for a subaccount directly
-    await top_up(account=subaccount, client=client)
+async def fund_wallet(client: Client, wallet: Account):
+    print(f\"Requesting testnet tokens for {wallet.public_key[:10]}...\")
+    try:
+        await top_up(account=wallet, client=client)
+        print(\"Faucet request submitted. Check balance after a few seconds.\")
+    except Exception as e:
+        print(f\"Faucet top_up failed: {e}\")
 
-    # Or use the root account with default subaccount
-    await top_up(account=saline.account, client=client)
-
-# Run the async function
-asyncio.run(get_testnet_tokens())
+# To run:
+# asyncio.run(fund_wallet(client, wallet1))
 ```
 
-### Check Balances
+### 5. Create and Send a Transaction
 
-```python
-# Get balance of default subaccount
-balance = saline.get_balance(currency="USDC")
-print(f"USDC Balance: {balance}")
-
-# Get all balances
-all_balances = saline.get_all_balances()
-for currency, amount in all_balances.items():
-    print(f"{currency}: {amount}")
-```
-
-### Send Transactions
-
-```python
-# Simple transfer
-result = saline.transfer(
-    to="recipient_public_key",
-    amount=100.0,
-    currency="USDC"
-)
-print(f"Transaction hash: {result['hash']}")
-
-# Wait for confirmation
-receipt = saline.wait_for_transaction_receipt(result['hash'])
-if receipt:
-    print("Transaction confirmed!")
-```
-
-### Advanced Usage: Create and Sign Transactions
-
-```python
-from saline_sdk import transfer, sign, encodeSignedTx
-from saline_sdk.transaction.tx import Transaction
-import uuid
-
-# Create a transaction with a transfer instruction
-tx = Transaction(
-    instructions=[
-        transfer(
-            sender=subaccount.public_key,
-            recipient="destination_public_key",
-            token="USDC",
-            amount=100
-        )
-    ]
-)
-
-# Set the signer
-tx.set_signer(subaccount.public_key)
-
-# Generate a nonce
-nonce = str(uuid.uuid4())
-
-# Sign the transaction
-signed_tx = sign(subaccount, nonce, tx)
-
-# Encode for network submission
-encoded_tx = encodeSignedTx(signed_tx)
-
-# Send the signed transaction
-result = saline.send_transaction(encoded_tx)
-```
-
-### Asynchronous API
+Build, sign, and submit a transaction (requires `async`).
 
 ```python
 import asyncio
+import json
+from saline_sdk.transaction.bindings import Transaction, TransferFunds, NonEmpty
+from saline_sdk.transaction.tx import prepareSimpleTx
 
-async def check_and_transfer():
-    # Check balance
-    balance = await saline.get_balance_async(currency="USDC")
+# Assume 'client' and 'wallet1' (sender) are initialized and funded
 
-    if balance >= 100:
-        # Send transaction
-        result = await saline.send_transaction_async(encoded_tx)
+async def send_funds(client: Client, sender_wallet: Account, recipient_pk: str, token: str, amount: int):
+    print(f\"Preparing to send {amount} {token} from {sender_wallet.public_key[:10]}... to {recipient_pk[:10]}...\")
+    instruction = TransferFunds(
+        source=sender_wallet.public_key,
+        target=recipient_pk,
+        funds={token: amount}
+    )
+    tx = Transaction(instructions=NonEmpty.from_list([instruction]))
 
-        # Wait for confirmation
-        receipt = await saline.wait_for_transaction_receipt_async(result['hash'])
-        return receipt
+    # Sign using the sender's wallet
+    signed_tx = prepareSimpleTx(sender_wallet, tx)
 
-    return None
+    # Submit
+    try:
+        result = await client.tx_commit(signed_tx)
+        print(f\"Transaction submitted! Result: {json.dumps(result)}\")
+    except Exception as e:
+        print(f\"Transaction submission failed: {e}\")
 
-# Run the async function
-receipt = asyncio.run(check_and_transfer())
+# Example Run (replace recipient_pk)
+# recipient_public_key = \"pk_of_recipient_wallet...\"
+# asyncio.run(send_funds(client, wallet1, recipient_public_key, \"USDC\", 50))
 ```
 
 ## Documentation
 
-For complete documentation, visit [the Saline SDK documentation](x).
+For complete documentation, including advanced topics like Intents, visit [the Saline SDK documentation](https://saline-sdk.readthedocs.io/). (Ensure this link is correct)
 
 ## Development
 

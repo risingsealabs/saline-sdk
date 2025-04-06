@@ -8,7 +8,8 @@ These examples correspond to the scripts found in the ``examples/`` directory of
 Basic Transaction
 ===============
 
-This example demonstrates how to create and submit a basic transfer transaction. See ``examples/basic_transaction.py``.
+This example demonstrates how to create and submit a basic transfer transaction.
+See ``examples/basic_transaction.py``.
 
 .. code-block:: python
 
@@ -16,113 +17,169 @@ This example demonstrates how to create and submit a basic transfer transaction.
     import json
     from saline_sdk.account import Account
     from saline_sdk.rpc.client import Client
-    from saline_sdk.transaction.instructions import transfer
-    from saline_sdk.transaction.bindings import NonEmpty, Transaction
+    from saline_sdk.transaction.bindings import NonEmpty, Transaction, TransferFunds
     from saline_sdk.transaction.tx import prepareSimpleTx
 
     TEST_MNEMONIC = "excuse ozone east canoe duck tortoise dentist approve bid wagon area funny"
-    RPC_URL = "http://localhost:26657"
+    RPC_URL = "https://node0.try-saline.com"
 
     async def main():
-        # Create the root account from mnemonic
-        account = Account.from_mnemonic(TEST_MNEMONIC)
+        # Create a temporary root account for this run
+        root_account = Account.create()
+        print("root account mnemonic:", root_account._mnemonic)
+
 
         # Derive subaccounts for sender and receiver
-        sender = account.create_subaccount(label="sender")
-        receiver = account.create_subaccount(label="receiver")
+        sender = root_account.create_subaccount(label="sender")
+        receiver = root_account.create_subaccount(label="receiver")
 
-        transfer_instruction = transfer(
-            sender=sender.public_key,
-            recipient=receiver.public_key,
-            token="USDC",
-            amount=20
+        # Create a TransferFunds instruction
+        transfer_instruction = TransferFunds(
+            source=sender.public_key,
+            target=receiver.public_key,
+            funds={"USDC": 20}
         )
 
         tx = Transaction(
             instructions=NonEmpty.from_list([transfer_instruction]),
         )
 
-        rpc = Client(http_url=RPC_URL)
-        # Submit transaction and wait for validation
-        result = await rpc.tx_commit(prepareSimpleTx(sender,tx))
-        print(f"\nRPC response: {json.dumps(result, indent=2)}")
+        # Connect to the Saline node
+        client = Client(http_url=RPC_URL)
+        try:
+            status = client.get_status()
+                    print(f"Connected to node: {status['node_info']['moniker']} @ {status['node_info']['network']} (Block: {status['sync_info']['latest_block_height']})")
+['latest_block_height']})")
+        except Exception as e:
+            print(f"ERROR: Could not connect to RPC @ {RPC_URL}. ({e})")
+            return
 
-Token Swap
-=========
+        # Fund the sender account (necessary for the transfer)
+        print("Funding sender account via faucet...")
+        try:
+            # Import top_up function
+            from saline_sdk.rpc.testnet.faucet import top_up
+            await top_up(account=sender, client=client, tokens={"USDC": 50})
+            print("Faucet funding successful.")
+            # Add a small delay for faucet transaction processing
+            await asyncio.sleep(3)
+        except Exception as e:
+            print(f"WARN: Faucet top-up failed: {e}")
+            # Decide whether to continue or return based on faucet requirement
+            # return # Example: stop if faucet fails
 
-This example shows how to create a token swap transaction between two parties.
-See ``examples/token_swap.py``.
+        # Sign the transaction using the sender's account and submit
+        print("Submitting transfer transaction...")
+        try:
+            signed_tx = prepareSimpleTx(sender, tx)
+            result = await client.tx_commit(signed_tx)
+            print(f"RPC response: {json.dumps(result, indent=2)}")
+        except Exception as e:
+            print(f"ERROR: Transaction submission failed: {e}")
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+
+Token Swap (Intent-Based)
+=========================
+
+This example shows how to set up matching swap intents and have a matcher fulfill them.
+This is the recommended way to perform swaps in Saline.
+See ``examples/simple_matcher.py`` (this example is simplified from the script).
 
 .. code-block:: python
 
     import asyncio
     import json
-    import uuid
     from saline_sdk.account import Account
-    from saline_sdk.transaction.bindings import NonEmpty, Signed, Transaction
-    from saline_sdk.transaction.tx import encodeSignedTx
-    from saline_sdk.transaction.instructions import transfer
+    from saline_sdk.transaction.bindings import (
+        NonEmpty, Transaction, SetIntent, TransferFunds,
+        Send, Receive, Flow, Token, Restriction, Relation, All, Lit
+    )
+    from saline_sdk.transaction.tx import prepareSimpleTx
     from saline_sdk.rpc.client import Client
-    from saline_sdk.crypto.bls import BLS
+    from saline_sdk.rpc.testnet.faucet import top_up
 
-    TEST_MNEMONIC = "excuse ozone east canoe duck tortoise dentist approve bid wagon area funny"
-    RPC_URL = "http://localhost:26657"
+    RPC_URL = "https://node0.try-saline.com"
+    WAIT_SECONDS = 5 # Wait for intents to process
 
-    async def create_and_submit_swap():
-        # Create accounts for the swap participants
-        root = Account.from_mnemonic(TEST_MNEMONIC)
+    async def setup_and_match_swap():
+        # Create accounts for the swap participants and a matcher
+        root = Account.create()
         alice = root.create_subaccount(label="alice")
         bob = root.create_subaccount(label="bob")
+        matcher = root.create_subaccount(label="matcher")
 
-        # Define swap parameters
-        alice_token = "USDC"
-        alice_amount = 100
-        bob_token = "BTC"
-        bob_amount = 1
+        # Connect to the node
+        client = Client(http_url=RPC_URL)
+        try:
+            status = client.get_status()
+                    print(f"Connected to node: {status['node_info']['moniker']} @ {status['node_info']['network']} (Block: {status['sync_info']['latest_block_height']})")
+['latest_block_height']})")
+        except Exception as e:
+            print(f"ERROR: Could not connect to RPC @ {RPC_URL}. ({e})")
+            return
 
-        # Create the transfer instructions for both sides of the swap
-        alice_instruction = transfer(
-            sender=alice.public_key,
-            recipient=bob.public_key,
-            token=alice_token,
-            amount=alice_amount
-        )
+        # Fund Alice and Bob
+        print("Funding Alice and Bob via faucet...")
+        try:
+            await asyncio.gather(
+                top_up(account=alice, client=client, tokens={"USDC": 150}),
+                top_up(account=bob, client=client, tokens={"BTC": 2})
+            )
+            print("Faucet funding complete. Waiting for tx processing...")
+            await asyncio.sleep(WAIT_SECONDS)
+        except Exception as e:
+            print(f"WARN: Faucet top-up failed: {e}")
+            # return # Optionally stop if faucet fails
 
-        bob_instruction = transfer(
-            sender=bob.public_key,
-            recipient=alice.public_key,
-            token=bob_token,
-            amount=bob_amount
-        )
+        # Alice wants 1 BTC for 100 USDC
+        alice_intent = All([
+            Restriction(Send(Flow(None, Token["USDC"])), Relation.EQ, Lit(100)),
+            Restriction(Receive(Flow(None, Token["BTC"])), Relation.EQ, Lit(1))
+        ])
+        # Bob wants 100 USDC for 1 BTC
+        bob_intent = All([
+            Restriction(Send(Flow(None, Token["BTC"])), Relation.EQ, Lit(1)),
+            Restriction(Receive(Flow(None, Token["USDC"])), Relation.EQ, Lit(100))
+        ])
 
-        # Combine the instructions into a single transaction
-        tx = Transaction(instructions=NonEmpty.from_list([alice_instruction, bob_instruction]))
+        # Set intents
+        print("Setting swap intents...")
+        alice_set_intent_tx = Transaction(instructions=NonEmpty.from_list([SetIntent(alice.public_key, alice_intent)]))
+        bob_set_intent_tx = Transaction(instructions=NonEmpty.from_list([SetIntent(bob.public_key, bob_intent)]))
+        try:
+            await asyncio.gather(
+                client.tx_commit(prepareSimpleTx(alice, alice_set_intent_tx)),
+                client.tx_commit(prepareSimpleTx(bob, bob_set_intent_tx))
+            )
+            print(f"Intents submitted. Waiting {WAIT_SECONDS}s for propagation...")
+            await asyncio.sleep(WAIT_SECONDS)
+        except Exception as e:
+            print(f"ERROR: Failed to set intents: {e}")
+            return
 
-        # Generate a unique nonce for the transaction
-        nonce = str(uuid.uuid4())
+        # --- Matcher Logic (Simplified - see simple_matcher.py for full implementation) ---
+        # In a real scenario, the matcher would query intents (client.get_all_intents())
+        # find the matching pair (alice_intent matches bob_intent), and extract addresses.
+        # Here we assume the matcher found Alice and Bob.
 
-        # Prepare the message to sign (this would be shared between parties)
-        msg = json.dumps([nonce, Transaction.to_json(tx)], separators=(',', ':')).encode('utf-8')
+        print("Matcher found pair: Alice <=> Bob. Preparing fulfillment transaction...")
+        fulfillment_instruction1 = TransferFunds(source=alice.public_key, target=bob.public_key, funds={"USDC": 100})
+        fulfillment_instruction2 = TransferFunds(source=bob.public_key, target=alice.public_key, funds={"BTC": 1})
+        fulfillment_tx = Transaction(instructions=NonEmpty.from_list([fulfillment_instruction1, fulfillment_instruction2]))
 
-        # Each party signs the same message
-        alice_sig = alice.sign(msg)
-        bob_sig = bob.sign(msg)
+        # Matcher signs and submits
+        print("Submitting fulfillment transaction...")
+        try:
+            signed_fulfillment_tx = prepareSimpleTx(matcher, fulfillment_tx)
+            result = await client.tx_commit(signed_fulfillment_tx)
+            print(f"Fulfillment Result: {json.dumps(result, indent=2)}")
+        except Exception as e:
+            print(f"ERROR: Fulfillment failed: {e}")
 
-        # Aggregate the signatures into a single BLS signature
-        aggregate_signature = BLS.aggregate_signatures([alice_sig, bob_sig])
-
-        # Create the final signed transaction
-        signed_tx = Signed(
-            nonce=nonce,
-            signature=aggregate_signature.hex(),
-            signee=tx,
-            signers=NonEmpty.from_list([alice.public_key, bob.public_key])
-        )
-
-        # Submit the transaction to the network
-        rpc = Client(http_url=RPC_URL)
-        result = await rpc.tx_commit(encodeSignedTx(signed_tx))
-        return result
+    if __name__ == "__main__":
+        asyncio.run(setup_and_match_swap())
 
 Multi-Signature Intent
 =========================
@@ -137,13 +194,16 @@ See ``examples/install_multisig_intent.py``.
     from saline_sdk.account import Account
     from saline_sdk.transaction.bindings import (
         NonEmpty, Transaction, SetIntent, Any,
-        Signature, Send, Flow, Token
+        Signature, Send, Flow, Token, Restriction, Relation, Lit
     )
     from saline_sdk.transaction.tx import prepareSimpleTx
     from saline_sdk.rpc.client import Client
 
+    RPC_URL = "https://node0.try-saline.com"
+
     async def create_and_install_multisig_intent():
-        root = Account.from_mnemonic(TEST_MNEMONIC)
+        # Use Account.create() for temporary accounts in examples
+        root = Account.create()
 
         # Create 3 signers for the multisig
         signer1 = root.create_subaccount(label="signer1")
@@ -154,33 +214,56 @@ See ``examples/install_multisig_intent.py``.
         multisig_wallet = root.create_subaccount(label="multisig_wallet")
 
         # Define the multisig intent
-        # This creates an intent that requires either:
-        # 1. The transaction only sends <= 1 BTC (small transaction limit), OR
-        # 2. The transaction has at least 2 of 3 signatures from the signers
+        # Requires either:
+        # 1. The transaction only sends <= 1 BTC (using Restriction binding)
+        # 2. The transaction has at least 2 of 3 signatures (using Signature binding)
 
-        # First part: restriction for small amounts (<=1 BTC)
-        small_tx_restriction = Send(Flow(None, Token.BTC)) <= 1
+        # Part 1: Restriction for small amounts (<=1 BTC)
+        small_tx_restriction = Restriction(
+            Send(Flow(None, Token["BTC"])),
+            Relation.LE,
+            Lit(1)
+        )
 
-        # Second part: 2-of-3 multisignature requirement
+        # Part 2: 2-of-3 multisignature requirement
         signatures = [
             Signature(signer1.public_key),
             Signature(signer2.public_key),
             Signature(signer3.public_key)
         ]
+        # Any(threshold, list_of_conditions) - requires threshold conditions to be met
         multisig_requirement = Any(2, signatures)
 
-        # Combine the two conditions with OR (using the Any operator with threshold 1)
+        # Combine the two conditions with OR (using Any with threshold 1)
+        # Any(1, [...]) means: Is condition 1 OR condition 2 true?
         multisig_intent = Any(1, [small_tx_restriction, multisig_requirement])
 
         # Create a SetIntent instruction to install the intent on the multisig wallet
         set_intent_instruction = SetIntent(multisig_wallet.public_key, multisig_intent)
 
         tx = Transaction(instructions=NonEmpty.from_list([set_intent_instruction]))
-        signed_tx = prepareSimpleTx(multisig_wallet, tx)
 
-        rpc = Client(http_url=RPC_URL)
-        result = await rpc.tx_commit(signed_tx)
-        return result
+        # Connect to the node
+        client = Client(http_url=RPC_URL)
+        try:
+            status = client.get_status()
+                    print(f"Connected to node: {status['node_info']['moniker']} @ {status['node_info']['network']} (Block: {status['sync_info']['latest_block_height']})")
+['latest_block_height']})")
+        except Exception as e:
+            print(f"ERROR: Could not connect to RPC @ {RPC_URL}. ({e})")
+            return
+
+        # Sign with the wallet being modified and submit
+        print("Submitting SetIntent transaction...")
+        try:
+            signed_tx = prepareSimpleTx(multisig_wallet, tx)
+            result = await client.tx_commit(signed_tx)
+            print(f"SetIntent Result: {json.dumps(result, indent=2)}")
+        except Exception as e:
+            print(f"ERROR: SetIntent failed: {e}")
+
+    if __name__ == "__main__":
+        asyncio.run(create_and_install_multisig_intent())
 
 Restrictive Intent
 ===============
@@ -194,75 +277,119 @@ Simple Restriction Example
 
 This simplified example demonstrates how to create a restrictive intent that only allows receiving SALT tokens
 from a specific trusted sender address. This creates a highly restricted wallet for secure custody.
-See ``examples/simple_restriction.py``.
+See ``examples/restrictive_intent.py``.
 
 .. code-block:: python
 
     from saline_sdk.account import Account
-    from saline_sdk.transaction.bindings import Flow, NonEmpty, Receive, SetIntent, Transaction, TransferFunds
+    from saline_sdk.transaction.bindings import (
+        Flow, NonEmpty, Receive, SetIntent, Transaction, TransferFunds, Token
+    )
     from saline_sdk.transaction.tx import prepareSimpleTx
-    from saline_sdk.rpc.client import Client, Token
+    from saline_sdk.rpc.client import Client
     import asyncio
     from saline_sdk.rpc.testnet.faucet import top_up
 
+    RPC_URL = "https://node0.try-saline.com"
+    WAIT_SECONDS = 3 # Wait for transactions
+
     async def main():
-        root_account = Account.from_mnemonic(PERSISTENT_MNEMONIC)
+        # Use Account.create() for example clarity
+        root_account = Account.create()
         wallet = root_account.create_subaccount(label="restricted_wallet")
         trusted = root_account.create_subaccount(label="trusted_sender")
         untrusted = root_account.create_subaccount(label="untrusted_sender")
 
-        rpc = Client(http_url=RPC_URL)
+        client = Client(http_url=RPC_URL)
+        try:
+            status = client.get_status()
+            print(f"Connected: {status['node_info']['network']} (Block: {status['sync_info']['latest_block_height']})")
+        except Exception as e:
+            print(f"ERROR: Connection failed: {e}")
+            return
 
         # Fund the test accounts
-        await top_up(account=trusted, client=rpc)
-        await top_up(account=untrusted, client=rpc)
+        print("Funding accounts via faucet...")
+        try:
+            await asyncio.gather(
+                top_up(account=trusted, client=client, tokens={"SALT": 50, "USDC": 50}),
+                top_up(account=untrusted, client=client, tokens={"SALT": 50})
+            )
+            print("Funding complete. Waiting {WAIT_SECONDS}s...")
+            await asyncio.sleep(WAIT_SECONDS)
+        except Exception as e:
+            print(f"WARN: Faucet funding failed: {e}")
+            # return # Optionally stop
 
-        # Clear any existing intent
+        # Clear any existing intent (optional, good practice for testing)
+        print("Clearing existing intent on wallet...")
         clear_tx = Transaction(instructions=NonEmpty.from_list([
             SetIntent(wallet.public_key, None)
         ]))
-        await rpc.tx_commit(prepareSimpleTx(wallet, clear_tx))
+        try:
+            await client.tx_commit(prepareSimpleTx(wallet, clear_tx))
+            print("Clear intent submitted. Waiting {WAIT_SECONDS}s...")
+            await asyncio.sleep(WAIT_SECONDS)
+        except Exception as e:
+            print(f"WARN: Failed to clear intent: {e}")
 
         # Set restrictive intent - only allow receiving SALT from trusted sender
-        restricted_intent = Receive(Flow(trusted.public_key, Token.SALT))
+        print("Setting restrictive intent on wallet...")
+        restricted_intent = Receive(Flow(trusted.public_key, Token["SALT"]))
         set_intent = SetIntent(wallet.public_key, restricted_intent)
         tx = Transaction(instructions=NonEmpty.from_list([set_intent]))
-        await rpc.tx_commit(prepareSimpleTx(wallet, tx))
+        try:
+            await client.tx_commit(prepareSimpleTx(wallet, tx))
+            print("Restrictive intent set. Waiting {WAIT_SECONDS}s...")
+            await asyncio.sleep(WAIT_SECONDS)
+        except Exception as e:
+            print(f"ERROR: Failed to set restrictive intent: {e}")
+            return # Stop if intent setting fails
 
         # Test transactions against the intent:
+        print("\nTesting transfers against intent...")
+        import json
 
         # Test 1: SALT from trusted sender (should pass)
-        transfer1 = TransferFunds(
-            source=trusted.public_key,
-            target=wallet.public_key,
-            funds={"SALT": 15}
-        )
+        print("Test 1: Sending SALT from TRUSTED sender (EXPECT PASS)...")
+        transfer1 = TransferFunds(source=trusted.public_key, target=wallet.public_key, funds={"SALT": 15})
         tx1 = Transaction(instructions=NonEmpty.from_list([transfer1]))
-        await rpc.tx_commit(prepareSimpleTx(trusted, tx1))
+        try:
+            result1 = await client.tx_commit(prepareSimpleTx(trusted, tx1))
+            print(f"  Result: {json.dumps(result1)}")
+        except Exception as e:
+            print(f"  ERROR: {e}")
+        await asyncio.sleep(WAIT_SECONDS)
 
         # Test 2: SALT from untrusted sender (should fail)
-        transfer2 = TransferFunds(
-            source=untrusted.public_key,
-            target=wallet.public_key,
-            funds={"SALT": 15}
-        )
+        print("Test 2: Sending SALT from UNTRUSTED sender (EXPECT FAIL)...")
+        transfer2 = TransferFunds(source=untrusted.public_key, target=wallet.public_key, funds={"SALT": 15})
         tx2 = Transaction(instructions=NonEmpty.from_list([transfer2]))
-        await rpc.tx_commit(prepareSimpleTx(untrusted, tx2))
+        try:
+            result2 = await client.tx_commit(prepareSimpleTx(untrusted, tx2))
+            print(f"  Result: {json.dumps(result2)}")
+        except Exception as e:
+            print(f"  ERROR: {e}")
+        await asyncio.sleep(WAIT_SECONDS)
 
         # Test 3: USDC from trusted sender (should fail)
-        transfer3 = TransferFunds(
-            source=trusted.public_key,
-            target=wallet.public_key,
-            funds={"USDC": 10}
-        )
+        print("Test 3: Sending USDC from TRUSTED sender (EXPECT FAIL)...")
+        transfer3 = TransferFunds(source=trusted.public_key, target=wallet.public_key, funds={"USDC": 10})
         tx3 = Transaction(instructions=NonEmpty.from_list([transfer3]))
-        await rpc.tx_commit(prepareSimpleTx(trusted, tx3))
+        try:
+            result3 = await client.tx_commit(prepareSimpleTx(trusted, tx3))
+            print(f"  Result: {json.dumps(result3)}")
+        except Exception as e:
+            print(f"  ERROR: {e}")
+
+    if __name__ == "__main__":
+        asyncio.run(main())
 
 Testnet Faucet with Swap Intent
 ==============================
 
-This example demonstrates how to request tokens from the testnet faucet and create matching swap intents.
-See ``examples/faucet_and_swap_intent.py``.
+This example demonstrates requesting tokens from the testnet faucet and creating matching swap intents, similar to the `simple_matcher.py` flow.
+See ``examples/faucet_and_swap_intent.py`` (this is a conceptual reconstruction).
 
 .. code-block:: python
 
@@ -271,38 +398,86 @@ See ``examples/faucet_and_swap_intent.py``.
     from saline_sdk.account import Account
     from saline_sdk.transaction.bindings import (
         NonEmpty, Transaction, SetIntent, TransferFunds,
-        Send, Receive, Flow, Token
+        Send, Receive, Flow, Token, Restriction, Relation, All, Lit
     )
     from saline_sdk.transaction.tx import prepareSimpleTx
     from saline_sdk.rpc.client import Client
     from saline_sdk.rpc.testnet.faucet import top_up
 
-    async def create_swap_match():
-        # Create account and client
+    RPC_URL = "https://node0.try-saline.com"
+    WAIT_SECONDS = 5
+
+    async def faucet_and_swap_example():
+        # Create accounts
         root_account = Account.create()
         alice = root_account.create_subaccount(label="alice")
         bob = root_account.create_subaccount(label="bob")
         matcher = root_account.create_subaccount(label="matcher")
 
-        rpc = Client(http_url=RPC_URL)
+        # Connect to client
+        client = Client(http_url=RPC_URL)
+        try:
+            status = client.get_status()
+            print(f"Connected: {status['node_info']['network']} (Block: {status['sync_info']['latest_block_height']})")
+        except Exception as e:
+            print(f"ERROR: Connection failed: {e}")
+            return
 
         # Request tokens for Alice and Bob directly
         print("Requesting tokens from the faucet...")
-        await top_up(account=alice, client=rpc)
-        await top_up(account=bob, client=rpc)
+        try:
+            await asyncio.gather(
+                top_up(account=alice, client=client, tokens={"USDT": 15}),
+                top_up(account=bob, client=client, tokens={"BTC": 0.002})
+            )
+            print("Faucet funding complete. Waiting {WAIT_SECONDS}s...")
+            await asyncio.sleep(WAIT_SECONDS)
+        except Exception as e:
+            print(f"WARN: Faucet funding failed: {e}")
+            # return # Optionally stop
 
-        # Create matching swap intents
-        alice_intent = Send(Flow(None, Token["USDT"])) * 10 <= Receive(Flow(None, Token["BTC"])) * 0.001
-        bob_intent = Send(Flow(None, Token["BTC"])) * 0.001 <= Receive(Flow(None, Token["USDT"])) * 10
+        # Create matching swap intents (Alice: 10 USDT for 0.001 BTC; Bob: 0.001 BTC for 10 USDT)
+        print("Setting swap intents...")
+        alice_intent = All([
+            Restriction(Send(Flow(None, Token["USDT"])), Relation.EQ, Lit(10)),
+            Restriction(Receive(Flow(None, Token["BTC"])), Relation.EQ, Lit(0.001))
+        ])
+        bob_intent = All([
+            Restriction(Send(Flow(None, Token["BTC"])), Relation.EQ, Lit(0.001)),
+            Restriction(Receive(Flow(None, Token["USDT"])), Relation.EQ, Lit(10))
+        ])
 
-        # Set up the intents on the blockchain
-        # [...]
+        # Set intents on the blockchain
+        alice_set_tx = Transaction(instructions=NonEmpty.from_list([SetIntent(alice.public_key, alice_intent)]))
+        bob_set_tx = Transaction(instructions=NonEmpty.from_list([SetIntent(bob.public_key, bob_intent)]))
+        try:
+            await asyncio.gather(
+                client.tx_commit(prepareSimpleTx(alice, alice_set_tx)),
+                client.tx_commit(prepareSimpleTx(bob, bob_set_tx))
+            )
+            print(f"Intents set. Waiting {WAIT_SECONDS}s...")
+            await asyncio.sleep(WAIT_SECONDS)
+        except Exception as e:
+            print(f"ERROR: Failed to set intents: {e}")
+            return
 
         # Execute the swap match using the matcher account
-        # [...]
+        print("Matcher fulfilling swap...")
+        fulfill_tx = Transaction(instructions=NonEmpty.from_list([
+            TransferFunds(source=alice.public_key, target=bob.public_key, funds={"USDT": 10}),
+            TransferFunds(source=bob.public_key, target=alice.public_key, funds={"BTC": 0.001})
+        ]))
+        try:
+            signed_fulfill = prepareSimpleTx(matcher, fulfill_tx)
+            result = await client.tx_commit(signed_fulfill)
+            print(f"Fulfillment Result: {json.dumps(result, indent=2)}")
+        except Exception as e:
+            print(f"ERROR: Fulfillment failed: {e}")
 
-        # Show balances before and after the swap
-        # [...]
+        # Optional: Show balances before and after the swap (Add similar logic from simple_matcher)
+
+    if __name__ == "__main__":
+        asyncio.run(faucet_and_swap_example())
 
 Additional Examples
 =================
@@ -319,13 +494,16 @@ The SDK repository contains additional example files demonstrating more advanced
 Using the Testnet Module
 =================
 
-The Saline SDK includes a testnet module for development purposes. The faucet functionality has been moved to ``saline_sdk.rpc.testnet.faucet``:
+The Saline SDK includes a testnet module for development purposes. The faucet functionality is available via ``saline_sdk.rpc.testnet.faucet.top_up``:
 
 .. code-block:: python
 
+    import asyncio
     from saline_sdk.account import Account
     from saline_sdk.rpc.client import Client
     from saline_sdk.rpc.testnet.faucet import top_up
+
+    RPC_URL = "https://node0.try-saline.com"
 
     async def request_testnet_tokens():
         # Create an account
@@ -333,27 +511,40 @@ The Saline SDK includes a testnet module for development purposes. The faucet fu
         alice = account.create_subaccount(label="alice")
 
         # Create a client
-        client = Client(http_url="http://localhost:26657")
+        client = Client(http_url=RPC_URL)
+        try:
+            status = client.get_status()
+            print(f"Connected: {status['node_info']['network']} (Block: {status['sync_info']['latest_block_height']})")
+        except Exception as e:
+            print(f"ERROR: Connection failed: {e}")
+            return
 
         # Request tokens from the testnet faucet
-        # The function now accepts both Account and Subaccount objects directly
-        print("Requesting tokens directly for a subaccount...")
-        new_balances = await top_up(
-            account=alice,  # Can pass Subaccount directly
-            client=client,
-            use_dynamic_amounts=True  # Get the amounts defined in the faucet intent
-        )
+        print("Requesting default faucet tokens for Alice...")
+        try:
+            # The function accepts Account or Subaccount objects
+            # use_dynamic_amounts=True gets the amounts defined in the faucet's own intent
+            new_balances = await top_up(
+                account=alice,
+                client=client,
+                use_dynamic_amounts=True
+            )
+            print(f"Balances after default top-up: {new_balances}")
+        except Exception as e:
+            print(f"WARN: Default top_up failed: {e}")
 
-        print(f"New balances: {new_balances}")
+        # Or request specific amounts
+        print("Requesting specific token amounts for Alice...")
+        try:
+            custom_balances = await top_up(
+                account=alice,
+                client=client,
+                tokens={"BTC": 0.5, "ETH": 5, "USDC": 500},
+                use_dynamic_amounts=False
+            )
+            print(f"Balances after custom top-up: {custom_balances}")
+        except Exception as e:
+            print(f"WARN: Custom top_up failed: {e}")
 
-        # Or you can use the root account with default subaccount
-        print("Requesting tokens for default subaccount...")
-        account.set_default_subaccount("alice")
-        custom_balances = await top_up(
-            account=account,  # Using Account with default subaccount
-            client=client,
-            tokens={"BTC": 0.5, "ETH": 5, "USDC": 500},
-            use_dynamic_amounts=False  # Use our specified amounts
-        )
-
-        print(f"Updated balances with custom amounts: {custom_balances}")
+    if __name__ == "__main__":
+        asyncio.run(request_testnet_tokens())

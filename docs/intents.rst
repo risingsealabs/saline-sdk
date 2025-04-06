@@ -14,64 +14,63 @@ Key Characteristics of Intents:
 - **Enforceable**: The blockchain enforces intents at transaction execution time
 - **Future-proof**: Intents work with transactions that may not exist yet (like future swap matches)
 
-Intents
-===============
+Intent Primitives and Composites
+===============================
 
-Saline provides several basic primitives that can be combined to build complex intents:
+Saline provides several basic building blocks that can be combined to create complex intents:
 
 Primitives
 --------------
 - ``Restriction()``: Require two expressions be related in a given way
 - ``Signature()``: Require signature from a given public key
 
+Composites
+--------------
+- ``All(conditions: list)``: Requires that **all** sub-intents/conditions in the list are fulfilled (logical AND).
+- ``Any(threshold: int, conditions: list)``: Requires that **at least `threshold`** sub-intents/conditions in the list are fulfilled (logical OR or M-of-N).
+
 Modifiers
 --------------
-- ``Temporary()``: Restrict an intent to a timeframe
-- ``Finite()``: Restrict an intent to a maximum number of uses
-
-Composite
---------------
-- ``All()``: Requirement that all sub-intents be fulfilled
-- ``Any()``: Require all sub-intents be fulfilled
-
+- ``Temporary(expiry_timestamp: int, available_after: bool, intent)``: Restricts an intent to be valid only up to a specific Unix timestamp.
+- ``Finite(max_uses: int, intent)``: Restricts an intent to a maximum number of uses.
 
 Expressions
-===============
-- ``Lit()``: A literal value
-- ``Balance``: Balance of the account hosting the intent
-- ``Receive()``, ``Send()``: Token inflow/outflow from your account
-- ``Arithmetic2()``: Elementary arithmetic over expressions
-
-Operator Syntax
 =============
+Expressions are used within ``Restriction`` intents to evaluate conditions based on transaction details or account state:
 
-The sdk overloads several Python operators to allow for intuitive manipulation of expressions and intents:
-
-- ``&``: shorthand for ``All``
-- ``|``: shorthand for ``Any 1``
-- ``<=``, ``>=``, ``<``, ``>``: create an intent from two expressions
-- ``*``, ``+``, ``-``, ``/``: arithmetically combine two expressions
-
-Examples:
-
-.. code-block:: python
-
-    # Keep at least two USDC for each USDT
-    Balance(USDC) >= 2 * Balance(USDT)
-
-    # Prevent USDC dusting
-    Receive(Flow(None, Token.USDC)) >= 10
+- ``Lit(value)``: Represents a literal value (e.g., number, string).
+- ``Balance(token: str)``:Balance of the specified token for the account hosting the intent.
+- ``Receive(flow: Flow)``: Represents the amount of a token received according to the specified ``Flow``.
+- ``Send(flow: Flow)``: Represents the amount of a token sent according to the specified ``Flow``.
+- ``Arithmetic2(op: ArithOp, lhs, rhs)``: Elementary arithmetic operations (Add, Sub, Mul, Div) over expressions.
 
 Flow
---------------
+----
 
-A ``Flow`` represents a token movement between parties:
+A ``Flow`` object specifies the movement of a token, potentially involving a specific counterparty:
 
 .. code-block:: python
 
-    Flow(counterparty, token)
+    from saline_sdk.transaction.bindings import Flow, Token
 
-The flow parameters define:
+    # Flow arguments: (counterparty_pk: str | None, token: str)
+
+    # Represents a flow of any amount of ETH to/from any counterparty
+    any_eth_flow = Flow(None, Token[\"ETH\"]) # Correct Token syntax
+
+    # Represents a flow of any amount of USDC but only with a specific counterparty
+    specific_usdc_flow = Flow(\"pk_of_counterparty...\", Token[\"USDC\"])
+
+Operator Syntax (Optional Shorthands)
+=====================================
+
+For convenience, the SDK *may* overload some Python operators as shorthands for common intent constructions. However, using the explicit binding classes (`Restriction`, `All`, `Any`, `Arithmetic2`, etc.) is generally recommended for clarity, especially for complex intents. The examples below primarily use the explicit bindings.
+
+*Potential* Shorthands (Check SDK source or specific examples for current support):
+- ``&``: Shorthand for ``All([...])``
+- ``|``: Shorthand for ``Any(1, [...])`` (logical OR)
+- ``<=``, ``>=``, ``<``, ``>``: Create a ``Restriction`` between two expressions.
+- ``*``, ``+``, ``-``, ``/``: Create an ``Arithmetic2`` expression.
 
 1. **Counterparty**: The account on the other side of the transaction
   - ``None``: Any account
@@ -161,7 +160,7 @@ Complete Swap Intent Example
     client = Client()
     result = await client.tx_commit(signed_tx)
 
-Advanced Intent Patterns
+Advanced Intent Patterns (Coming Soon)
 ====================
 
 Time-Limited Intent
@@ -198,8 +197,8 @@ Creating an intent that can only be used a specific number of times:
 Best Practices
 ===========
 
-1. **Start simple**: Begin with basic swap patterns and gradually build complexity
-2. **Use meaningful variable names**: Name your intents according to their purpose
-3. **Test extensively**: Verify intents behave as expected with different transaction patterns
-4. **Use None for counterparty when possible**: This allows for maximum interoperability
-5. **Consider adding time limits**: For sensitive operations, consider adding Temporary constraints
+1. **Use Explicit Bindings**: Prefer `Restriction`, `All`, `Any` for clarity over operator shorthands, especially for non-trivial intents.
+2. **Start Simple**: Begin with basic patterns (like fixed swaps) and gradually add complexity (`Any`, `Temporary`, `Finite`).
+3. **Test Extensively**: Verify intents behave as expected with various transaction patterns.
+4. **Use `None` for Counterparty**: When possible, use `Flow(None, ...)` for maximum interoperability.
+5. **Consider Modifiers**: For sensitive operations, consider adding `Temporary` or `Finite` constraints.

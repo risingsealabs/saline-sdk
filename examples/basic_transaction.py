@@ -7,7 +7,7 @@ from saline_sdk.transaction.bindings import NonEmpty, Transaction
 from saline_sdk.transaction.tx import prepareSimpleTx
 
 TEST_MNEMONIC = "excuse ozone east canoe duck tortoise dentist approve bid wagon area funny"
-RPC_URL = "http://localhost:26657"
+RPC_URL = "https://node1.try-saline.com"
 
 async def main():
     # Create the root account from mnemonic

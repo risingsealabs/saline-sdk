@@ -1,7 +1,11 @@
 """
-Simple Faucet Example for Saline Protocol
+Intent Fulfillment Example for Saline Protocol
 
-Supports both the simple scenario of a fixed amount of tokens, and the more complex scenario of a dynamic amount of tokens based on the intent.
+Demonstrates how to fulfill a faucet intent using the Saline SDK.
+
+Supports:
+- Simple scenario of a fixed amount of tokens
+- Complex scenario where the amount of tokens allowed is derived from the intent.
 """
 
 import asyncio

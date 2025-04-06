@@ -30,14 +30,18 @@ To start using the Saline SDK, follow these steps:
 
    .. code-block:: python
 
-       from saline_sdk import Saline
+       from saline_sdk import Client
 
-       # Connect to a Saline node
-       client = Saline(node_url="http://localhost:26657")
+       # Connect to a Saline node using the http_url parameter
+       client = Client(http_url=\"https://node0.try-saline.com\")
 
-       # Check connection
-       if client.is_connected():
-           print("Connected to Saline node!")
+       # Check connection by calling get_status()
+       try:
+           status = client.get_status() # Synchronous call
+                   print(f"Connected to node: {status['node_info']['moniker']} @ {status['node_info']['network']} (Block: {status['sync_info']['latest_block_height']})")
+['latest_block_height']})")
+       except Exception as e:
+           print(f"Failed to connect or get status: {e}")
 
 3. See the :doc:`quickstart` guide for more detailed instructions.
 

@@ -33,8 +33,8 @@ For development purposes, you can install the SDK from source:
 .. code-block:: bash
 
     # Clone the repository
-    git clone https://github.com/yourusername/saline-sdk.git
+    git clone https://github.com/risingsealabs/saline-sdk.git
     cd saline-sdk
-    
-    # Install with Poetry
-    poetry install 
+
+    # Install dependencies using Poetry
+    poetry install
