@@ -1,0 +1,12 @@
+{
+  "swap_intent": {
+    "send": {
+      "token": "USDC",
+      "amount": 10.0
+    },
+    "receive": {
+      "token": "BTC",
+      "amount": 0.001
+    }
+  }
+} 
