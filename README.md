@@ -2,6 +2,8 @@
 
 Official Python SDK for interacting with the Saline blockchain network.
 
+This is under active development. Both bugs and breaking changes can occur.
+
 [![Python Version](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
