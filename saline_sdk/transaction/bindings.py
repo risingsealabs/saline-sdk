@@ -463,6 +463,8 @@ class Intent():
         return All.from_json(d)
       case "Any":
         return Any.from_json(d)
+      case "Counterparty":
+        return Counterparty.from_json(d)
       case "Restriction":
         return Restriction.from_json(d)
       case "Finite":
@@ -482,6 +484,9 @@ class Intent():
         return dict(sorted(d.items()))
       case Any():
         d = {"tag" : "Any"} | Any.to_json(x)
+        return dict(sorted(d.items()))
+      case Counterparty():
+        d = {"tag" : "Counterparty"} | Counterparty.to_json(x)
         return dict(sorted(d.items()))
       case Restriction():
         d = {"tag" : "Restriction"} | Restriction.to_json(x)
@@ -538,6 +543,24 @@ class Any(Intent):
     d = dict()
     d["threshold"] = x.threshold
     d["children"] = list(map(Intent.to_json, x.children))
+    return d
+
+
+class Counterparty(Intent):
+  def __init__(self, address: G2Element):
+    super().__init__()
+    self.address = address
+
+  @staticmethod
+  def from_json(d):
+    return Counterparty(d["address"])
+
+  @staticmethod
+  def to_json(x: 'Counterparty'):
+    if (not isinstance(x,Counterparty)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Counterparty)+ '\n' + '  ' + 'Got: ' + str(type(x)))
+    d = dict()
+    d["address"] = x.address
     return d
 
 
