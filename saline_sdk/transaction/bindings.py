@@ -355,38 +355,38 @@ class Balance(Expr):
 
 
 class Receive(Expr):
-  def __init__(self, flow: 'Flow'):
+  def __init__(self, token: Token):
     super().__init__()
-    self.flow = flow
+    self.token = token
 
   @staticmethod
   def from_json(d):
-    return Receive(Flow.from_json(d["flow"]))
+    return Receive(Token.from_json(d["token"]))
 
   @staticmethod
   def to_json(x: 'Receive'):
     if (not isinstance(x,Receive)):
       raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Receive)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
-    d["flow"] = Flow.to_json(x.flow)
+    d["token"] = Token.to_json(x.token)
     return d
 
 
 class Send(Expr):
-  def __init__(self, flow: 'Flow'):
+  def __init__(self, token: Token):
     super().__init__()
-    self.flow = flow
+    self.token = token
 
   @staticmethod
   def from_json(d):
-    return Send(Flow.from_json(d["flow"]))
+    return Send(Token.from_json(d["token"]))
 
   @staticmethod
   def to_json(x: 'Send'):
     if (not isinstance(x,Send)):
       raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Send)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
-    d["flow"] = Flow.to_json(x.flow)
+    d["token"] = Token.to_json(x.token)
     return d
 
 
@@ -427,26 +427,6 @@ class Arithmetic2(Expr):
     d["lhs"] = Expr.to_json(x.lhs)
     d["operation"] = Arithmetic.to_json(x.operation)
     d["rhs"] = Expr.to_json(x.rhs)
-    return d
-
-
-class Flow():
-  def __init__(self, target: Optional[Expr], token: Token):
-    super().__init__()
-    self.target = target
-    self.token = token
-
-  @staticmethod
-  def from_json(d):
-    return Flow(None if d["target"] == None else Expr.from_json(d["target"]), Token.from_json(d["token"]))
-
-  @staticmethod
-  def to_json(x: 'Flow'):
-    if (not isinstance(x,Flow)):
-      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Flow)+ '\n' + '  ' + 'Got: ' + str(type(x)))
-    d = dict()
-    d["target"] = None if x.target == None else Expr.to_json(x.target)
-    d["token"] = Token.to_json(x.token)
     return d
 
 

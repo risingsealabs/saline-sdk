@@ -94,7 +94,7 @@ See ``examples/simple_matcher.py`` (this example is simplified from the script).
     from saline_sdk.account import Account
     from saline_sdk.transaction.bindings import (
         NonEmpty, Transaction, SetIntent, TransferFunds,
-        Send, Receive, Flow, Token, Restriction, Relation, All, Lit
+        Send, Receive, Token, Restriction, Relation, All, Lit
     )
     from saline_sdk.transaction.tx import prepareSimpleTx
     from saline_sdk.rpc.client import Client
@@ -135,13 +135,13 @@ See ``examples/simple_matcher.py`` (this example is simplified from the script).
 
         # Alice wants 1 BTC for 100 USDC
         alice_intent = All([
-            Restriction(Send(Flow(None, Token["USDC"])), Relation.EQ, Lit(100)),
-            Restriction(Receive(Flow(None, Token["BTC"])), Relation.EQ, Lit(1))
+            Restriction(Send(Token["USDC"]), Relation.EQ, Lit(100)),
+            Restriction(Receive(Token["BTC"]), Relation.EQ, Lit(1))
         ])
         # Bob wants 100 USDC for 1 BTC
         bob_intent = All([
-            Restriction(Send(Flow(None, Token["BTC"])), Relation.EQ, Lit(1)),
-            Restriction(Receive(Flow(None, Token["USDC"])), Relation.EQ, Lit(100))
+            Restriction(Send(Token["BTC"]), Relation.EQ, Lit(1)),
+            Restriction(Receive(Token["USDC"]), Relation.EQ, Lit(100))
         ])
 
         # Set intents
@@ -194,7 +194,7 @@ See ``examples/install_multisig_intent.py``.
     from saline_sdk.account import Account
     from saline_sdk.transaction.bindings import (
         NonEmpty, Transaction, SetIntent, Any,
-        Signature, Send, Flow, Token, Restriction, Relation, Lit
+        Signature, Send, Token, Restriction, Relation, Lit
     )
     from saline_sdk.transaction.tx import prepareSimpleTx
     from saline_sdk.rpc.client import Client
@@ -220,7 +220,7 @@ See ``examples/install_multisig_intent.py``.
 
         # Part 1: Restriction for small amounts (<=1 BTC)
         small_tx_restriction = Restriction(
-            Send(Flow(None, Token["BTC"])),
+            Send(Token["BTC"]),
             Relation.LE,
             Lit(1)
         )
@@ -283,7 +283,7 @@ See ``examples/restrictive_intent.py``.
 
     from saline_sdk.account import Account
     from saline_sdk.transaction.bindings import (
-        Flow, NonEmpty, Receive, SetIntent, Transaction, TransferFunds, Token
+        NonEmpty, Receive, SetIntent, Transaction, TransferFunds, Token
     )
     from saline_sdk.transaction.tx import prepareSimpleTx
     from saline_sdk.rpc.client import Client
@@ -335,7 +335,7 @@ See ``examples/restrictive_intent.py``.
 
         # Set restrictive intent - only allow receiving SALT from trusted sender
         print("Setting restrictive intent on wallet...")
-        restricted_intent = Receive(Flow(trusted.public_key, Token["SALT"]))
+        restricted_intent = Counterparty(trusted.public_key) & (Receive(Token.SALT) >= 10)
         set_intent = SetIntent(wallet.public_key, restricted_intent)
         tx = Transaction(instructions=NonEmpty.from_list([set_intent]))
         try:
@@ -398,7 +398,7 @@ See ``examples/faucet_and_swap_intent.py`` (this is a conceptual reconstruction)
     from saline_sdk.account import Account
     from saline_sdk.transaction.bindings import (
         NonEmpty, Transaction, SetIntent, TransferFunds,
-        Send, Receive, Flow, Token, Restriction, Relation, All, Lit
+        Send, Receive, Token, Restriction, Relation, All, Lit
     )
     from saline_sdk.transaction.tx import prepareSimpleTx
     from saline_sdk.rpc.client import Client
@@ -439,12 +439,12 @@ See ``examples/faucet_and_swap_intent.py`` (this is a conceptual reconstruction)
         # Create matching swap intents (Alice: 10 USDT for 0.001 BTC; Bob: 0.001 BTC for 10 USDT)
         print("Setting swap intents...")
         alice_intent = All([
-            Restriction(Send(Flow(None, Token["USDT"])), Relation.EQ, Lit(10)),
-            Restriction(Receive(Flow(None, Token["BTC"])), Relation.EQ, Lit(0.001))
+            Restriction(Send(Token["USDT"]), Relation.EQ, Lit(10)),
+            Restriction(Receive(Token["BTC"]), Relation.EQ, Lit(0.001))
         ])
         bob_intent = All([
-            Restriction(Send(Flow(None, Token["BTC"])), Relation.EQ, Lit(0.001)),
-            Restriction(Receive(Flow(None, Token["USDT"])), Relation.EQ, Lit(10))
+            Restriction(Send(Token["BTC"]), Relation.EQ, Lit(0.001)),
+            Restriction(Receive(Token["USDT"]), Relation.EQ, Lit(10))
         ])
 
         # Set intents on the blockchain

@@ -13,7 +13,7 @@ from typing import Dict, List, Tuple, Optional, Any, TypedDict
 from saline_sdk.account import Account
 from saline_sdk.transaction.bindings import (
     NonEmpty, Transaction, SetIntent, TransferFunds, Signed,
-    Send, Receive, Flow, Token, Restriction, Relation, All, Any, Lit, Expr
+    Send, Receive, Token, Restriction, Relation, All, Any, Lit, Expr
 )
 from saline_sdk.transaction.tx import prepareSimpleTx
 from saline_sdk.rpc.client import Client
@@ -58,10 +58,10 @@ async def create_accounts_with_swap_intents(client: Client, root_account: Accoun
 
         # Define swap intent
         send_restriction = Restriction(
-            Send(Flow(None, Token[config["give_token"]])), Relation.EQ, Lit(config["give_amount"])
+            Send(Token[config["give_token"]]), Relation.EQ, Lit(config["give_amount"])
         )
         receive_restriction = Restriction(
-            Receive(Flow(None, Token[config["want_token"]])), Relation.EQ, Lit(config["want_amount"])
+            Receive(Token[config["want_token"]]), Relation.EQ, Lit(config["want_amount"])
         )
         swap_intent = All([send_restriction, receive_restriction])
 
@@ -87,7 +87,7 @@ def _extract_restriction_details(restriction_node: Dict[str, Any]) -> Optional[D
     lhs = restriction_node.get('lhs', {}); rhs = restriction_node.get('rhs', {})
     if restriction_node.get('relation') != Relation.EQ.name: return None
     if not isinstance(rhs, dict) or rhs.get('tag') != 'Lit': return None
-    amount = rhs.get('value'); token_str = lhs.get('flow', {}).get('token')
+    amount = rhs.get('value'); token_str = lhs.get('token')
     if amount is None or not token_str: return None
 
     tag_type = lhs.get('tag')
