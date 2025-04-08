@@ -134,14 +134,14 @@ RECEIVE_DOC = """
 An expression representing the amount of tokens received
 
 Attributes:
-    flow: The token flow specification
+    token: The selected token
 """
 
 SEND_DOC = """
 An expression representing the amount of tokens sent
 
 Attributes:
-    flow: The token flow specification
+    token: The selected token
 """
 
 VAR_DOC = """
@@ -155,17 +155,6 @@ Attributes:
     lhs: Left-hand side expression
     operation: The arithmetic operation type
     rhs: Right-hand side expression
-"""
-
-# Flow documentation
-FLOW_DOC = """
-Represents a token flow between accounts.
-
-A flow specifies the token type and optionally a target for the flow.
-
-Attributes:
-    target: Optional target expression
-    token: The token type involved in the flow
 """
 
 # Intent documentation
