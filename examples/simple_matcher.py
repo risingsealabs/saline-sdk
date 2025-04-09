@@ -4,7 +4,7 @@ Simple Swap Matcher Example for Saline Protocol
 Demonstrates how to:
 1. Create multiple accounts with different swap intents
 2. Find matching swap pairs on-chain by analyzing all intents
-3. Fulfill the first matching swap found.
+3. Fulfill the first matching swap found with sufficient balances.
 """
 
 import asyncio
@@ -12,11 +12,14 @@ from typing import Dict, List, Tuple, Optional, Any, TypedDict
 
 from saline_sdk.account import Account
 from saline_sdk.transaction.bindings import (
-    NonEmpty, Transaction, SetIntent, TransferFunds, Signed,
-    Send, Receive, Token, Restriction, Relation, All, Any, Lit, Expr
+    NonEmpty, Transaction, SetIntent, TransferFunds,
+    Send, Receive, Token, Restriction, Relation, All, Any, Lit, Intent
 )
 from saline_sdk.transaction.tx import prepareSimpleTx
 from saline_sdk.rpc.client import Client
+from saline_sdk.rpc.query_responses import (
+    ParsedIntentInfo
+)
 from saline_sdk.rpc.testnet.faucet import top_up
 
 # Configuration
@@ -43,20 +46,27 @@ SWAP_CONFIGS = [
 ]
 
 async def create_accounts_with_swap_intents(client: Client, root_account: Account) -> Dict[str, Account]:
-    """Creates subaccounts, funds them via faucet, and sets swap intents."""
-    print(f"Creating {len(SWAP_CONFIGS)} accounts and setting swap intents...")
+    """Creates subaccounts, funds them via faucet, and sets swap intents sequentially."""
+    print("Creating accounts and setting swap intents sequentially...")
     accounts = {}
-    tasks = []
 
     for config in SWAP_CONFIGS:
-        name = config["name"]
-        account = root_account.create_subaccount(label=name)
-        accounts[name] = account
+        account = root_account.create_subaccount(label=config['name'])
+        accounts[config["name"]] = account
+        pubkey = account.public_key
+        print(f"Created account {config['name']} with public key: {pubkey[:10]}...")
 
-        # Request faucet top-up (non-blocking)
-        tasks.append(top_up(account=account, client=client, use_dynamic_amounts=False))
+        # Fund the account via Faucet
+        try:
+            await top_up(account, client)
+            print(f"  -> Funding requested for {config['name']} ({pubkey[:6]}...).")
+        except Exception as e:
+            print(f"  -> WARN: Failed to request funding for {config['name']}: {e}")
 
-        # Define swap intent
+        # Verify balance
+        account_balances = await client.get_wallet_info_async(account.public_key)
+        print(f"  {config['name']} Balances: {format_balances(account_balances.balances)}")
+
         send_restriction = Restriction(
             Send(Token[config["give_token"]]), Relation.EQ, Lit(config["give_amount"])
         )
@@ -64,70 +74,84 @@ async def create_accounts_with_swap_intents(client: Client, root_account: Accoun
             Receive(Token[config["want_token"]]), Relation.EQ, Lit(config["want_amount"])
         )
         swap_intent = All([send_restriction, receive_restriction])
-
-        # Prepare and submit SetIntent transaction (non-blocking)
         set_intent_instruction = SetIntent(account.public_key, swap_intent)
         tx = Transaction(instructions=NonEmpty.from_list([set_intent_instruction]))
         signed_tx = prepareSimpleTx(account, tx)
-        tasks.append(client.tx_commit(signed_tx))
-
-    # Wait for all faucet and intent transactions to complete
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    success_count = sum(1 for r in results if isinstance(r, dict) and r.get("error") is None)
-    fail_count = len(tasks) - success_count
-    print(f"Intent/Faucet submissions complete: {success_count} succeeded, {fail_count} failed/exceptions.")
-
-
+        try:
+            intent_result = await client.tx_commit(signed_tx)
+            if intent_result and intent_result.get("error") is None:
+                print(f"Swap Intent for {config['name']} submitted successfully. Hash: {intent_result.get('hash')}")
+            else:
+                error_msg = intent_result.get("error") if intent_result else "Empty result"
+                print(f"Swap Intent for {config['name']} failed: {error_msg}")
+        except Exception as e:
+            print(f"Swap Intent for {config['name']} failed: {e}")
     return accounts
 
-def _extract_restriction_details(restriction_node: Dict[str, Any]) -> Optional[Dict]:
-    """Helper to extract token/amount from Send/Receive Restriction nodes."""
-    if not isinstance(restriction_node, dict) or restriction_node.get('tag') != 'Restriction': return None
-    lhs = restriction_node.get('lhs', {}); rhs = restriction_node.get('rhs', {})
-    if restriction_node.get('relation') != Relation.EQ.name: return None
-    if not isinstance(rhs, dict) or rhs.get('tag') != 'Lit': return None
-    amount = rhs.get('value'); token_str = lhs.get('token')
-    if amount is None or not token_str: return None
+def _extract_restriction_details(restriction_node: Restriction) -> Optional[Dict]:
+    """Helper to extract token/amount from Send/Receive Restriction nodes using bindings."""
+    if restriction_node.relation != Relation.EQ:
+        return None
+    if not isinstance(restriction_node.rhs, Lit):
+        return None
+    if not isinstance(restriction_node.lhs, (Send, Receive)):
+        return None
 
-    tag_type = lhs.get('tag')
-    details = {'token': token_str, 'amount': int(amount)}
-    if tag_type == 'Send': return {'type': 'send', **details}
-    if tag_type == 'Receive': return {'type': 'receive', **details}
-    return None
+    # Extract details
+    amount = restriction_node.rhs.value
+    token = restriction_node.lhs.token
 
-def _find_swap_in_intent_node(intent_node: Dict[str, Any]) -> Optional[Tuple[Dict, Dict]]:
-    """Recursively searches intent structure for a Send/Receive pair under an 'All' node."""
-    if not isinstance(intent_node, dict): return None
-    tag = intent_node.get('tag')
+    try:
+        details = {'token': token.name, 'amount': int(amount)}
+        if isinstance(restriction_node.lhs, Send):
+            return {'type': 'send', **details}
+        else: # Must be Receive
+            return {'type': 'receive', **details}
+    except (TypeError, ValueError):
+        return None
 
-    if tag == 'All':
-        children = intent_node.get('children', [])
+def _find_swap_intent(intent_node: Optional[Intent]) -> Optional[Tuple[Dict, Dict]]:
+    """Recursively searches bindings structure for a Send/Receive pair under an 'All' node."""
+    if intent_node is None:
+        return None
+
+    if isinstance(intent_node, All):
         send_details, receive_details = None, None
-        for child in children:
-            details = _extract_restriction_details(child)
-            if details:
-                if details['type'] == 'send': send_details = details
-                elif details['type'] == 'receive': receive_details = details
-            if send_details and receive_details: return send_details, receive_details
-        # Recurse if not found directly under this 'All'
-        for child in children:
-             if isinstance(child, dict) and child.get('tag') in ['All', 'Any']:
-                 if nested := _find_swap_in_intent_node(child): return nested
-    elif tag == 'Any': # Also check branches under 'Any'
-        for child in intent_node.get('children', []):
-            if isinstance(child, dict) and child.get('tag') in ['All', 'Any']:
-                 if nested := _find_swap_in_intent_node(child): return nested
-    return None
+        for child in intent_node.children:
+            if isinstance(child, Restriction):
+                details = _extract_restriction_details(child)
+                if details:
+                    if details['type'] == 'send':
+                        send_details = details
+                    elif details['type'] == 'receive':
+                        receive_details = details
+            if send_details and receive_details:
+                return send_details, receive_details
 
-def extract_swap_details(intent_data: Dict[str, Any], intent_key: str) -> Optional[SwapDetails]:
-    """Extracts swap details and signer address from intent data."""
-    if not intent_data: return None
+        # If not found directly, recurse into nested All/Any children
+        for child in intent_node.children:
+            if isinstance(child, (All, Any)):
+                if nested_result := _find_swap_intent(child):
+                    return nested_result
+    elif isinstance(intent_node, Any):
+        # Recurse into Any children as well
+        for child in intent_node.children:
+            if isinstance(child, (All, Any)):
+                if nested_result := _find_swap_intent(child):
+                    return nested_result
 
-    # Extract signer address (robustly check structure)
+    return None # Not found
+
+def extract_swap_details(intent_info: ParsedIntentInfo) -> Optional[SwapDetails]:
+    """Extracts swap details and signer address from ParsedIntentInfo."""
+    if not intent_info or not intent_info.parsed_intent or intent_info.error:
+        return None
+
+    # Extract address from the associated address list
     actual_address: Optional[str] = None
     try:
-        addr_list = intent_data.get('addresses')
+        # addresses field structure: [["address_hash", []]]
+        addr_list = intent_info.addresses
         if isinstance(addr_list, list) and addr_list and isinstance(addr_list[0], list) and addr_list[0]:
             if isinstance(addr := addr_list[0][0], str):
                 actual_address = addr
@@ -137,15 +161,9 @@ def extract_swap_details(intent_data: Dict[str, Any], intent_key: str) -> Option
     if not actual_address:
         return None
 
-    # Extract raw intent structure
-    raw_intent_list = intent_data.get('raw_intent')
-    if not isinstance(raw_intent_list, list) or not raw_intent_list:
-        return None
-    intent_structure = raw_intent_list[0]
-
-
     try:
-        swap_components = _find_swap_in_intent_node(intent_structure)
+        # Search within the parsed bindings.Intent object
+        swap_components = _find_swap_intent(intent_info.parsed_intent)
         if not swap_components: return None
 
         comp1, comp2 = swap_components
@@ -156,24 +174,29 @@ def extract_swap_details(intent_data: Dict[str, Any], intent_key: str) -> Option
         else:
             return None
 
-    except Exception as e:
-
+    except Exception:
         return None
 
 async def find_matching_swaps_from_blockchain(client: Client) -> List[Tuple[SwapDetails, SwapDetails]]:
     """Queries all intents, extracts swap details, and finds matching pairs."""
     print("Querying blockchain for all intents...")
-    all_intents = await client.get_all_intents()
-    if not all_intents:
+    all_intents_response = await client.get_all_intents()
+
+    if not all_intents_response or not all_intents_response.intents:
         print("WARN: No intents found or failed to retrieve intents.")
         return []
-    print(f"Retrieved {len(all_intents)} intent entries. Analyzing for swaps...")
 
-    # Extract valid swaps
+    print(f"Retrieved {len(all_intents_response.intents)} intent entries. Analyzing for swaps...")
+
+    # Filter for potential swap intents and parse them
     swaps: List[SwapDetails] = []
-    for intent_key, intent_data in all_intents.items():
-        if swap_details := extract_swap_details(intent_data, intent_key):
+
+    # Iterate over the ParsedIntentInfo objects in the .intents dictionary
+    for intent_info in all_intents_response.intents.values():
+        # Pass the ParsedIntentInfo object to the extraction function
+        if swap_details := extract_swap_details(intent_info):
             swaps.append(swap_details)
+
     print(f"Found {len(swaps)} potential swap intents.")
 
     # Find matching pairs (simple exact match)
@@ -199,30 +222,22 @@ async def find_matching_swaps_from_blockchain(client: Client) -> List[Tuple[Swap
     print(f"Found {len(matching_pairs)} matching swap pair(s).")
     return matching_pairs
 
-def print_balances(wallet_info: Optional[Dict[str, Any]], address_label: str):
-    if not wallet_info or 'balances' not in wallet_info:
-        print(f"    {address_label} Balances: Unavailable or no balances")
-        return
-
-    balances_list = wallet_info['balances']
-    if not balances_list:
-        print(f"    {address_label} Balances: Empty")
-        return
+def format_balances(balances_dict: Optional[Dict[str, Any]]) -> str:
+    """Formats a balance dictionary into a readable string."""
+    if not balances_dict:
+        return "Unavailable or no balances"
 
     balance_parts = []
-    for item in balances_list:
+    for token, amount in balances_dict.items():
         try:
-            if isinstance(item, list) and len(item) == 2:
-                balance_parts.append(f"{item[1]} {item[0]}")
-            elif isinstance(item, dict) and 'token' in item and 'amount' in item:
-                balance_parts.append(f"{item['amount']} {item['token']}")
-        except (IndexError, KeyError, TypeError):
-            pass
+            balance_parts.append(f"{amount} {token}")
+        except Exception:
+            balance_parts.append(f"{token}: ErrorFormatting({amount})")
 
     if not balance_parts:
-         print(f"    {address_label} Balances: (Could not parse format: {balances_list})")
+        return "(Empty)"
     else:
-        print(f"    {address_label} Balances: {', '.join(balance_parts)}")
+        return ', '.join(balance_parts)
 
 async def fulfill_swap_pair(client: Client, swap_pair: Tuple[SwapDetails, SwapDetails], matcher_account: Account):
     """Fulfills a swap using TransferFunds and prints balances before/after."""
@@ -236,8 +251,8 @@ async def fulfill_swap_pair(client: Client, swap_pair: Tuple[SwapDetails, SwapDe
     print("--- Balances Before Swap ---")
     info1_before = await client.get_wallet_info_async(addr1)
     info2_before = await client.get_wallet_info_async(addr2)
-    print_balances(info1_before, f"{addr1_short}")
-    print_balances(info2_before, f"{addr2_short}")
+    print(f"    {addr1_short}: {format_balances(info1_before.balances)}")
+    print(f"    {addr2_short}: {format_balances(info2_before.balances)}")
 
     # Prepare Swap Transaction
     instruction1 = TransferFunds(source=addr1, target=addr2, funds={swap1["give_token"]: swap1["give_amount"]})
@@ -269,14 +284,14 @@ async def fulfill_swap_pair(client: Client, swap_pair: Tuple[SwapDetails, SwapDe
     try:
         info1_after = await client.get_wallet_info_async(addr1)
         info2_after = await client.get_wallet_info_async(addr2)
-        print_balances(info1_after, f"{addr1_short}")
-        print_balances(info2_after, f"{addr2_short}")
+        print(f"    {addr1_short}: {format_balances(info1_after.balances)}")
+        print(f"    {addr2_short}: {format_balances(info2_after.balances)}")
     except Exception as e:
         print(f"WARN: Failed to get post-swap balances: {e}")
 
     # Final outcome summary
     if tx_successful:
-         print(f"Swap between {addr1_short} and {addr2_short} potentially completed (Tx: {tx_hash}). Verify balances.")
+         print(f"Swap between {addr1_short} and {addr2_short} completed (Tx: {tx_hash}).")
     else:
          print(f"Swap between {addr1_short} and {addr2_short} failed: {error_msg}")
 
@@ -285,7 +300,7 @@ async def main():
     client = Client(http_url=RPC_URL)
 
     try:
-        status = client.get_status()
+        status = await client.get_status()
         print(f"Connected to node: {status['node_info']['moniker']} @ {status['node_info']['network']} (Block: {status['sync_info']['latest_block_height']})")
     except Exception as e:
         print(f"ERROR: Could not connect to RPC @ {RPC_URL}. Is node running? ({e})")
@@ -298,19 +313,51 @@ async def main():
     print(f"matcher public key: {matcher.public_key[:10]}...")
 
     # 1. Create accounts and set intents
-    # We don't need the returned accounts dict for matching
-    await create_accounts_with_swap_intents(client, root)
+    accounts = await create_accounts_with_swap_intents(client, root)
 
-    # Allow time for intents to be processed by the network
-    print(f"Waiting {INTENT_PROCESSING_WAIT_SECONDS}s for intents to propagate...")
-    await asyncio.sleep(INTENT_PROCESSING_WAIT_SECONDS)
+    # Allow time for intents and faucet funding to be processed
+    print(f"Waiting {INTENT_PROCESSING_WAIT_SECONDS + 10}s for intents and funding to propagate...")
+    await asyncio.sleep(INTENT_PROCESSING_WAIT_SECONDS + 10)
 
     # 2. Find matches by querying blockchain state
     matching_pairs = await find_matching_swaps_from_blockchain(client)
 
-    # 3. Fulfill the first match found
+    # 3. Check balances and fulfill the first valid match found
+    fulfilled = False
     if matching_pairs:
-        await fulfill_swap_pair(client, matching_pairs[0], matcher)
+        print(f"\nFound {len(matching_pairs)} potential swap pair(s). Checking balances...")
+        for i, (swap1, swap2) in enumerate(matching_pairs):
+            addr1, addr2 = swap1['address'], swap2['address']
+            addr1_short, addr2_short = f"{addr1[:6]}...", f"{addr2[:6]}..."
+            print(f"Checking Pair {i+1}: {addr1_short} <-> {addr2_short}")
+
+            try:
+                # Check balance for address 1
+                info1 = await client.get_wallet_info_async(addr1)
+                bal1 = info1.balances.get(swap1['give_token'], 0) if info1 and info1.balances else 0
+                has_bal1 = bal1 >= swap1['give_amount']
+                print(f"  {addr1_short}: Has {bal1} {swap1['give_token']} (Needs {swap1['give_amount']}) -> {'Sufficient' if has_bal1 else 'Insufficient'}")
+
+                # Check balance for address 2
+                info2 = await client.get_wallet_info_async(addr2)
+                bal2 = info2.balances.get(swap2['give_token'], 0) if info2 and info2.balances else 0
+                has_bal2 = bal2 >= swap2['give_amount']
+                print(f"  {addr2_short}: Has {bal2} {swap2['give_token']} (Needs {swap2['give_amount']}) -> {'Sufficient' if has_bal2 else 'Insufficient'}")
+
+                if has_bal1 and has_bal2:
+                    print(f"  Balances sufficient for Pair {i+1}. Attempting fulfillment...")
+                    await fulfill_swap_pair(client, (swap1, swap2), matcher)
+                    fulfilled = True
+                    break # Stop after fulfilling the first valid pair
+                else:
+                    print(f"  Skipping Pair {i+1} due to insufficient balance.")
+
+            except Exception as e:
+                print(f"  Error checking balances or fulfilling Pair {i+1}: {e}. Skipping.")
+                continue
+
+        if not fulfilled:
+            print("\nChecked all potential pairs, none had sufficient balances to fulfill.")
     else:
         print("\nNo matching swap pairs found.")
 

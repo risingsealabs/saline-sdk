@@ -40,7 +40,7 @@ async def main():
     transfer1 = TransferFunds(
         source=trusted.public_key,
         target=wallet.public_key,
-        funds={"SALT": 9}
+        funds={"SALT": 11}
     )
     tx1 = Transaction(instructions=NonEmpty.from_list([transfer1]))
     result1 = await rpc.tx_commit(prepareSimpleTx(trusted, tx1))
@@ -74,6 +74,7 @@ async def main():
     )
     tx3 = Transaction(instructions=NonEmpty.from_list([transfer3]))
     result3 = await rpc.tx_commit(prepareSimpleTx(trusted, tx3))
+    print(result3)
     print(f"Transaction result: {'ACCEPTED' if result3.get('error') is None else 'REJECTED: ' + str(result3.get('error'))}")
 
     # Check final balance

@@ -29,12 +29,18 @@ import json
 import logging
 import binascii
 import base64
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 import aiohttp
 import asyncio
 import requests
 from saline_sdk.rpc.error import RPCError
-from saline_sdk.transaction.bindings import Intent, All, Any, Finite, Temporary, Signature, Lit, Restriction, Relation, Token
+import saline_sdk.transaction.bindings as bindings
+from saline_sdk.rpc.query_responses import (
+    ParsedAllIntentsResponse,
+    ParsedIntentInfo,
+    ParsedWalletInfo,
+    parse_dict_to_binding_intent
+)
 
 # Type for tokens
 from enum import Enum
@@ -143,66 +149,6 @@ class Client:
             self._debug_log(error_msg)
             raise RPCError(error_msg)
 
-    def _make_request(
-        self,
-        method: str,
-        params: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """
-        Make a synchronous HTTP RPC request.
-
-        Args:
-            method: RPC method name
-            params: Optional parameters
-
-        Returns:
-            Response data
-
-        Raises:
-            RPCError: If the request fails
-        """
-        headers = {"Content-Type": "application/json"}
-        payload = {
-            "jsonrpc": "2.0",
-            "id": self._get_request_id(),
-            "method": method,
-            "params": params or {}
-        }
-
-        try:
-            self._debug_log(f"Making sync HTTP request: {method} with params: {params}")
-            response = requests.post(
-                self.http_url,
-                headers=headers,
-                json=payload
-            )
-            response.raise_for_status()
-            result = response.json()
-
-            if "error" in result:
-                error_msg = f"RPC error: {result['error']}"
-                self._debug_log(error_msg)
-                raise RPCError(error_msg)
-
-            return result["result"]
-
-        except requests.RequestException as e:
-            error_msg = f"HTTP request failed: {str(e)}"
-            self._debug_log(error_msg)
-            raise RPCError(error_msg)
-        except json.JSONDecodeError as e:
-            error_msg = f"Failed to decode response: {str(e)}"
-            self._debug_log(error_msg)
-            raise RPCError(error_msg)
-
-    def _run_async(self, coro):
-        """Run a coroutine in a new event loop."""
-        loop = asyncio.new_event_loop()
-        try:
-            return loop.run_until_complete(coro)
-        finally:
-            loop.close()
-
     def _hex_encode_data(self, data: str) -> str:
         """
         Convert data to hex-encoded string, ensuring even length.
@@ -284,18 +230,6 @@ class Client:
         """
         return await self._make_request_async("broadcast_tx_async", {"tx": tx_bytes})
 
-    def tx_fire_sync(self, tx_bytes: str) -> Dict[str, Any]:
-        """
-        Synchronous wrapper for tx_fire.
-
-        Args:
-            tx_bytes: Base64-encoded transaction bytes
-
-        Returns:
-            Transaction receipt with hash
-        """
-        return self._run_async(self.tx_fire(tx_bytes))
-
     async def tx_broadcast(self, tx_bytes: str) -> Dict[str, Any]:
         """
         Broadcast a transaction and wait for validation (using broadcast_tx_sync RPC).
@@ -309,18 +243,6 @@ class Client:
             Transaction receipt with validation results
         """
         return await self._make_request_async("broadcast_tx_sync", {"tx": tx_bytes})
-
-    def tx_broadcast_sync(self, tx_bytes: str) -> Dict[str, Any]:
-        """
-        Synchronous wrapper for tx_broadcast.
-
-        Args:
-            tx_bytes: Base64-encoded transaction bytes
-
-        Returns:
-            Transaction receipt with validation results
-        """
-        return self._run_async(self.tx_broadcast(tx_bytes))
 
     async def tx_commit(self, tx_bytes: str) -> Dict[str, Any]:
         """
@@ -336,18 +258,6 @@ class Client:
         """
         return await self._make_request_async("broadcast_tx_commit", {"tx": tx_bytes})
 
-    def tx_commit_sync(self, tx_bytes: str) -> Dict[str, Any]:
-        """
-        Synchronous wrapper for tx_commit.
-
-        Args:
-            tx_bytes: Base64-encoded transaction bytes
-
-        Returns:
-            Transaction receipt with commit results
-        """
-        return self._run_async(self.tx_commit(tx_bytes))
-
     # -------------------------------------------------------------------
     # Block and transaction methods
     # -------------------------------------------------------------------
@@ -360,35 +270,18 @@ class Client:
             params["height"] = str(height)
         return await self._make_request_async("block", params)
 
-    def get_block_sync(self, height: Optional[int] = None) -> Dict[str, Any]:
-        """Synchronous wrapper for get_block."""
-        return self._run_async(self.get_block(height))
-
     async def get_current_block(self) -> Dict[str, Any]:
         """Get the current block."""
         return await self.get_block()
-
-    def get_current_block_sync(self) -> Dict[str, Any]:
-        """Synchronous wrapper for get_current_block."""
-        return self._run_async(self.get_current_block())
 
     async def get_transactions(self, height: Optional[int] = None) -> List[Dict[str, Any]]:
         """Get transactions from a block at specified height or latest if not specified."""
         block = await self.get_block(height)
         return block.get("block", {}).get("data", {}).get("txs", [])
 
-    def get_transactions_sync(self, height: Optional[int] = None) -> List[Dict[str, Any]]:
-        """Synchronous wrapper for get_transactions."""
-        return self._run_async(self.get_transactions(height))
-
     async def get_tx(self, tx_hash: str) -> Dict[str, Any]:
         """Get transaction by hash."""
         return await self._make_request_async("tx", {"hash": tx_hash})
-
-    def get_tx_sync(self, tx_hash: str) -> Dict[str, Any]:
-        """Synchronous wrapper for get_tx."""
-        return self._run_async(self.get_tx(tx_hash))
-
 
     # -------------------------------------------------------------------
     # Query methods
@@ -403,15 +296,6 @@ class Client:
             Node status information
         """
         return await self._make_request_async("status", {})
-
-    def get_status(self) -> Dict[str, Any]:
-        """
-        Get node status synchronously.
-
-        Returns:
-            Node status information
-        """
-        return self._make_request("status", {})
 
     async def abci_query_async(self, path: str, data: str, height: int = 0, prove: bool = False) -> Dict[str, Any]:
         """
@@ -439,33 +323,6 @@ class Client:
 
         self._debug_log(f"ABCI query params: {params}")
         return await self._make_request_async("abci_query", params)
-
-    def abci_query(self, path: str, data: str, height: int = 0, prove: bool = False) -> Dict[str, Any]:
-        """
-        Make a direct ABCI query synchronously.
-
-        Args:
-            path: Query path (e.g., "/store/balance", "/store/intent")
-            data: Query data (hex-encoded)
-            height: Block height (0 for latest)
-            prove: Whether to include proofs
-
-        Returns:
-            Query result
-        """
-        params = {
-            "path": path,
-            "data": data,
-            "height": str(height),
-            "prove": prove
-        }
-
-        # Ensure data is properly quoted for the JSON-RPC API
-        if not data.startswith('"') and '"' not in data:
-            params["data"] = f'"{data}"'
-
-        self._debug_log(f"ABCI query params: {params}")
-        return self._make_request("abci_query", params)
 
     async def get_balance_async(self, address: str, token: str = "USDC") -> Optional[float]:
         """
@@ -508,19 +365,6 @@ class Client:
             self._debug_log(f"Error querying balance: {e}")
             return None
 
-    def get_balance(self, address: str, token: str = "USDC") -> Optional[float]:
-        """
-        Get the balance of a specific token for an address synchronously.
-
-        Args:
-            address: Account address to query
-            token: Token symbol (e.g., "USDC", "ETH")
-
-        Returns:
-            Balance amount or None if not found
-        """
-        return self._run_async(self.get_balance_async(address, token))
-
     async def get_all_balances_async(self, address: str) -> Dict[str, float]:
         """
         Get balances for all tokens for an address asynchronously.
@@ -561,279 +405,7 @@ class Client:
             self._debug_log(f"Error getting all balances: {e}")
             return {}
 
-    def get_all_balances(self, address: str) -> Dict[str, float]:
-        """
-        Get all token balances for an address.
-
-        Args:
-            address: Address to query balances for
-
-        Returns:
-            Dictionary mapping token symbols to amounts
-        """
-        return self._run_async(self.get_all_balances_async(address))
-
-    async def get_intent_async(self, address: str) -> Optional[Dict[str, Any]]:
-        """
-        Get the intent for an address asynchronously.
-
-        Args:
-            address: Account address to query
-
-        Returns:
-            Intent data or None if not found
-        """
-        self._debug_log(f"Querying intent for {address}")
-
-        try:
-            json_data = json.dumps(address)
-            hex_data = self._hex_encode_data(json_data)
-
-            url = f"{self.http_url}/abci_query"
-            params = {
-                "path": json.dumps("/store/intent"),
-                "data": f'"{hex_data}"',
-                "height": "0",
-                "prove": "false"
-            }
-
-            self._debug_log(f"Intent query parameters: {params}")
-
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, params=params) as response:
-                    response.raise_for_status()
-                    result = await response.json()
-
-                    code, decoded_str, json_value = self._process_response(result)
-
-                    if code == 0 and json_value is not None:
-                        return json_value
-                    else:
-                        self._debug_log(f"Intent query returned code {code}: {decoded_str}")
-                        return None
-        except Exception as e:
-            self._debug_log(f"Error querying intent: {e}")
-            return None
-
-    def get_intent(self, address: str) -> Optional[Dict[str, Any]]:
-        """
-        Get the intent for an address synchronously.
-
-        Args:
-            address: Account address to query
-
-        Returns:
-            Intent data or None if not found
-        """
-        return self._run_async(self.get_intent_async(address))
-
-    async def get_aggregate_balances_async(self, addresses: List[str]) -> Dict[str, float]:
-        """
-        Get aggregated balances across multiple addresses asynchronously.
-
-        This method calculates the sum of token balances across all provided addresses.
-        Useful for getting total balances across multiple wallets or accounts.
-
-        Args:
-            addresses: List of addresses to aggregate balances for
-
-        Returns:
-            Dictionary mapping token symbols to aggregated amounts
-        """
-        try:
-            json_data = json.dumps(addresses)
-            hex_data = self._hex_encode_data(json_data)
-
-            url = f"{self.http_url}/abci_query"
-            params = {
-                "path": json.dumps("/store/aggregate"),
-                "data": f'"{hex_data}"',
-                "height": "0",
-                "prove": "false"
-            }
-
-            self._debug_log(f"Aggregate balances query params: {params}")
-
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, params=params) as response:
-                    response.raise_for_status()
-                    result = await response.json()
-
-                    code, decoded_str, json_value = self._process_response(result)
-
-                    if code != 0:
-                        self._debug_log(f"Error querying aggregate balances: {decoded_str}")
-                        return {}
-
-                    if json_value is None:
-                        return {}
-
-                    if isinstance(json_value, dict):
-                        return json_value
-                    elif isinstance(json_value, list):
-                        balances = {}
-                        for item in json_value:
-                            if isinstance(item, list) and len(item) == 2:
-                                token, amount = item
-                                balances[token] = amount
-                        return balances
-                    else:
-                        return {}
-
-        except Exception as e:
-            self._debug_log(f"Error getting aggregate balances: {e}")
-            return {}
-
-    def get_aggregate_balances(self, addresses: List[str]) -> Dict[str, float]:
-        """
-        Get aggregated balances across multiple addresses.
-
-        This method calculates the sum of token balances across all provided addresses.
-        Useful for getting total balances across multiple wallets or accounts.
-
-        Args:
-            addresses: List of addresses to aggregate balances for
-
-        Returns:
-            Dictionary mapping token symbols to aggregated amounts
-        """
-        return self._run_async(self.get_aggregate_balances_async(addresses))
-
-    async def get_all_intents(self) -> Dict[str, Any]:
-        """
-        Get all intents in the system asynchronously.
-
-        This method queries the node for all registered intents and parses them into
-        specialized Intent objects from the SDK. It handles various intent types including
-        All, Any, Restriction, Finite, Temporary and Signature intents.
-
-        Returns:
-            Dictionary mapping intent identifiers to objects containing:
-            - 'intent': Parsed SDK Intent object (if parsing was successful)
-            - 'raw_intent': Original JSON intent data
-            - 'addresses': List of addresses associated with the intent
-            - 'error': Error message (if there was an error parsing)
-        """
-        try:
-            json_data = json.dumps([])  # For /store/intents, input is an empty array
-            hex_data = self._hex_encode_data(json_data)
-
-            params = {
-                "path": json.dumps("/store/intents"),
-                "data": f'"{hex_data}"',
-                "height": "0",
-                "prove": "false"
-            }
-
-            self._debug_log(f"All intents query params: {params}")
-
-            async with aiohttp.ClientSession() as session:
-                async with session.get(f"{self.http_url}/abci_query", params=params) as response:
-                    response.raise_for_status()
-                    result = await response.json()
-
-                    code, decoded_str, json_value = self._process_response(result)
-
-                    if code != 0 or json_value is None:
-                        self._debug_log(f"Error querying intents: {decoded_str}")
-                        return {}
-
-            parsed_intents = {}
-
-            def parse_intent(raw_intent, addresses=None, intent_id=None):
-                """Helper function to parse an intent and handle errors"""
-                tag = f"intent_{intent_id}" if intent_id is not None else str(raw_intent)
-                result = {
-                    'intent': None,
-                    'raw_intent': raw_intent,
-                    'addresses': addresses or []
-                }
-
-                # Try to parse the intent if it has a tag
-                if isinstance(raw_intent, dict) and 'tag' in raw_intent:
-                    try:
-                        result['intent'] = Intent.from_json(raw_intent)
-                        tag = f"{raw_intent['tag']}_{intent_id}" if intent_id is not None else raw_intent['tag']
-                    except Exception as e:
-                        self._debug_log(f"Error parsing intent: {e}")
-                        result['error'] = str(e)
-
-                # Handle token/amount pairs
-                elif (isinstance(raw_intent, list) and len(raw_intent) == 2 and
-                      isinstance(raw_intent[0], str) and isinstance(raw_intent[1], (int, float))):
-                    token, amount = raw_intent
-                    if token in ["BTC", "ETH", "USDC", "USDT", "SALT"]:
-                        try:
-                            result['intent'] = Restriction(Lit(0), Relation.EQ, Lit(amount))
-                            tag = f"TokenBalance_{token}_{intent_id}" if intent_id is not None else f"TokenBalance_{token}"
-                        except Exception as e:
-                            self._debug_log(f"Error creating token balance for {token}: {e}")
-                            result['error'] = str(e)
-
-                return tag, result
-
-            if isinstance(json_value, list):
-                self._debug_log(f"Received list of {len(json_value)} intent items")
-
-                for i, intent_item in enumerate(json_value):
-                    try:
-                        addresses = []
-                        raw_intent = None
-
-                        if isinstance(intent_item, list) and len(intent_item) > 0:
-                            raw_intent = intent_item[0]
-                            if len(intent_item) > 1:
-                                addresses = intent_item[1]
-
-                        if isinstance(raw_intent, list):
-                            for item in raw_intent:
-                                if isinstance(item, dict) and 'tag' in item:
-                                        raw_intent = item
-                                        break
-                        else:
-                            raw_intent = intent_item
-
-                        tag, intent_data = parse_intent(raw_intent, addresses, i)
-                        parsed_intents[tag] = intent_data
-
-                    except Exception as e:
-                        self._debug_log(f"Error parsing intent {i}: {e}")
-                        parsed_intents[f"intent_{i}"] = {
-                            'intent': None,
-                            'raw_intent': intent_item,
-                            'error': str(e),
-                            'addresses': []
-                        }
-
-            elif isinstance(json_value, dict):
-                for intent_type, addresses in json_value.items():
-                    tag, intent_data = parse_intent(intent_type, addresses)
-                    parsed_intents[tag] = intent_data
-
-            return parsed_intents
-
-        except Exception as e:
-            self._debug_log(f"Error getting all intents: {e}")
-            return {}
-
-    def get_all_intents_sync(self) -> Dict[str, Any]:
-        """
-        Get all intents in the system.
-
-        This method queries the node for all registered intents and parses them into
-        specialized Intent objects from the SDK. It handles various intent types including
-        All, Any, Restriction, Finite, Temporary and Signature intents.
-
-        Returns:
-            Dictionary mapping intent identifiers to objects containing:
-            - 'intent': Parsed SDK Intent object (if parsing was successful)
-            - 'raw_intent': Original JSON intent data
-            - 'addresses': List of addresses associated with the intent
-            - 'error': Error message (if there was an error parsing)
-        """
-        return self._run_async(self.get_all_intents())
-
-    async def get_wallet_info_async(self, address: str) -> Dict[str, Any]:
+    async def get_wallet_info_async(self, address: str) -> ParsedWalletInfo:
         """
         Get wallet information for an address asynchronously.
 
@@ -845,11 +417,9 @@ class Client:
             address: Address to get wallet info for
 
         Returns:
-            Dictionary with:
-            - "balances": Token balances (as dictionary or list of token/amount pairs)
-            - "raw_intent": Original intent data as JSON
-            - "sdk_intent": Intent parsed into a specialized SDK Intent object
+            ParsedWalletInfo dataclass containing parsed balances and intent.
         """
+        self._debug_log(f"Querying wallet info for {address}")
         try:
             json_data = json.dumps(address)
             hex_data = self._hex_encode_data(json_data)
@@ -872,49 +442,165 @@ class Client:
                     code, decoded_str, json_value = self._process_response(result)
 
                     if code != 0:
-                        self._debug_log(f"Error querying wallet info: {decoded_str}")
-                        return {}
+                        self._debug_log(f"Wallet info query returned error code {code}: {decoded_str}")
+                        # Return a default WalletInfo on error, preserving raw data if available
+                        return ParsedWalletInfo(address=address, balances={}, parsed_intent=None, raw_wallet_data=result.get('result'), error=f"RPC error code {code}: {decoded_str}")
 
-                    # Wallet response is a tuple of (balances, intent)
-                    # This is represented as a 2-element array in JSON
-                    if json_value and isinstance(json_value, list) and len(json_value) == 2:
-                        balances = json_value[0]
-                        raw_intent = json_value[1]
+                    # Process the returned JSON value
+                    if json_value is None:
+                        self._debug_log(f"Wallet info query returned None value.")
+                        return ParsedWalletInfo(address=address, balances={}, parsed_intent=None, raw_wallet_data=json_value, error="RPC returned null value")
 
-                        sdk_intent = None
-                        if raw_intent and isinstance(raw_intent, dict) and 'tag' in raw_intent:
+                    # --- Start Corrected Parsing Logic ---
+                    balances_raw = None
+                    raw_intent_data = None
+                    balances_dict = {}
+                    parsed_intent_obj: Optional[bindings.Intent] = None
+                    parsing_error = None # Initialize parsing error
+
+                    if isinstance(json_value, list) and len(json_value) >= 2:
+                        balances_raw = json_value[0] # First element is expected to be balances
+                        raw_intent_data = json_value[1] # Second element is expected to be intent
+                        self._debug_log(f"Extracted balances_raw: {balances_raw}")
+                        self._debug_log(f"Extracted raw_intent_data: {raw_intent_data}")
+
+                        # Process balances (assuming balances_raw is a list of [token, amount])
+                        if isinstance(balances_raw, list):
+                            for item in balances_raw:
+                                if isinstance(item, list) and len(item) == 2:
+                                    token, amount_val = item # Amount might be float or int from RPC
+                                    try:
+                                        # Convert amount to int, handling potential floats from RPC
+                                        balances_dict[token] = int(float(amount_val))
+                                    except (ValueError, TypeError):
+                                        self._debug_log(f"Could not parse amount for token {token}: {amount_val}")
+                                else:
+                                     self._debug_log(f"Unexpected balance item format: {item}")
+                        else:
+                            self._debug_log(f"Expected balances_raw to be a list, but got {type(balances_raw)}")
+                            parsing_error = f"Invalid balance data format: {type(balances_raw)}"
+
+                        # Process intent (raw_intent_data is expected to be a dict)
+                        if raw_intent_data:
+                            # --- Add Debug Logging for Raw Intent ---
+                            self._debug_log(f"Raw intent data for {address}: {json.dumps(raw_intent_data)}")
+                            # --- End Debug Logging ---
                             try:
-                                sdk_intent = Intent.from_json(raw_intent)
+                                # raw_intent_data should be a dict here for the parser
+                                if isinstance(raw_intent_data, dict):
+                                    parsed_intent_obj = parse_dict_to_binding_intent(raw_intent_data)
+                                    if parsed_intent_obj is None:
+                                        parsing_error = "Parsing intent returned None, structure likely invalid for bindings.py"
+                                else:
+                                    parsing_error = f"Expected raw_intent_data to be a dict, but got {type(raw_intent_data)}"
                             except Exception as e:
-                                self._debug_log(f"Error parsing intent: {e}")
+                                parsing_error = f"Intent parsing exception: {str(e)}"
+                                self._debug_log(f"Intent parsing exception for wallet {address}: {parsing_error}")
+                        else:
+                             self._debug_log(f"No raw_intent_data found in response for {address}")
 
-                        return {
-                            "balances": balances,
-                            "raw_intent": raw_intent,
-                            "sdk_intent": sdk_intent
-                        }
 
-                    return {}
+                    else:
+                        self._debug_log(f"Unexpected json_value structure: {type(json_value)}. Expected list with >= 2 elements.")
+                        parsing_error = "Invalid top-level data structure from RPC" # Set error if structure is wrong
+
+                    # --- End Corrected Parsing Logic ---
+
+                    return ParsedWalletInfo(
+                        address=address,
+                        balances=balances_dict,
+                        parsed_intent=parsed_intent_obj,
+                        raw_wallet_data=json_value,  # Store the whole original response for reference
+                        error=parsing_error  # Store parsing error if any
+                    )
 
         except Exception as e:
-            self._debug_log(f"Error getting wallet info: {e}")
-            return {}
+            self._debug_log(f"Error getting wallet info for {address}: {e}")
+            # Return default WalletInfo on exception
+            return ParsedWalletInfo(address=address, balances={}, parsed_intent=None, raw_wallet_data={"error": str(e)}, error=str(e))
 
-    def get_wallet_info(self, address: str) -> Dict[str, Any]:
+    async def get_all_intents(self) -> ParsedAllIntentsResponse:
         """
-        Get wallet information for an address.
+        Get all intents in the system asynchronously.
 
-        This method retrieves comprehensive information about a wallet, including:
-        - All token balances
-        - The wallet's intent (parsed into an SDK Intent object)
-
-        Args:
-            address: Address to get wallet info for
+        This method queries the node for all registered intents and parses them into
+        specialized Intent objects from the SDK. It handles various intent types including
+        All, Any, Restriction, Finite, Temporary and Signature intents.
 
         Returns:
-            Dictionary with:
-            - "balances": Token balances (as dictionary or list of token/amount pairs)
-            - "raw_intent": Original intent data as JSON
-            - "sdk_intent": Intent parsed into a specialized SDK Intent object
+            ParsedAllIntentsResponse object containing a dictionary of ParsedIntentInfo objects.
         """
-        return self._run_async(self.get_wallet_info_async(address))
+        try:
+            json_data = json.dumps([])  # For /store/intents, input is an empty array
+            hex_data = self._hex_encode_data(json_data)
+
+            params = {
+                "path": json.dumps("/store/intents"),
+                "data": f'"{hex_data}"',
+                "height": "0",
+                "prove": "false"
+            }
+
+            self._debug_log(f"All intents query params: {params}")
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{self.http_url}/abci_query", params=params) as response:
+                    response.raise_for_status()
+                    result = await response.json()
+
+                    code, decoded_str, json_value = self._process_response(result)
+
+                    if code != 0 or json_value is None:
+                        self._debug_log(f"Error querying all intents: {decoded_str}")
+                        return ParsedAllIntentsResponse(intents={})  # Return empty response on error
+
+            # --- END DEBUG PRINT ---
+
+            intents_info: Dict[str, ParsedIntentInfo] = {}
+
+            # Process the json_value which is expected to be a LIST
+            # Each item in the list is another list: [raw_intent_data, addresses_data]
+            if isinstance(json_value, list):
+                for index, data_list in enumerate(json_value):
+                    intent_id = f"intent_{index}" # Generate an ID based on index
+                    raw_intent_data = None
+                    addresses_data = []
+                    parsed_intent_obj = None
+                    error_msg = None
+
+                    # Extract raw intent and addresses, handling potential structure variations
+                    # data_list should be like [intent_dict, address_list_outer]
+                    if isinstance(data_list, list) and len(data_list) >= 1:
+                        raw_intent_data = data_list[0]  # Usually the first element
+                        if len(data_list) >= 2:
+                            addresses_data = data_list[1] # This is the list like [["addr_hash", []]]
+
+                    # Attempt to parse the raw intent data using the bindings parser
+                    if raw_intent_data:  # Pass the raw data which might be list or dict
+                        try:
+                            parsed_intent_obj = parse_dict_to_binding_intent(raw_intent_data)
+                            if parsed_intent_obj is None:
+                                error_msg = "Parsing returned None (structure invalid for bindings.py?)"
+                        except Exception as e:
+                            error_msg = f"Parsing exception: {str(e)}"
+                            self._debug_log(f"Parsing exception for {intent_id}: {error_msg}")
+
+                    # Add error if data_list structure was wrong
+                    elif not error_msg:
+                        error_msg = f"Unexpected structure for data_list item {index}: {type(data_list)}"
+
+                    intents_info[intent_id] = ParsedIntentInfo(
+                        intent_id=intent_id,
+                        parsed_intent=parsed_intent_obj,
+                        raw_intent_data=raw_intent_data,
+                        addresses=addresses_data,
+                        error=error_msg
+                    )
+            else:
+                self._debug_log(f"Unexpected top-level structure for all intents response: {type(json_value)}")
+
+            return ParsedAllIntentsResponse(intents=intents_info)
+
+        except Exception as e:
+            self._debug_log(f"Error getting all intents: {e}")
+            return ParsedAllIntentsResponse(intents={})  # Return empty response on exception
