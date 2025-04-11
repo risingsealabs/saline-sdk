@@ -7,7 +7,12 @@ RPC
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: saline_sdk.rpc.query_responses
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: saline_sdk.rpc.error
    :members:
    :undoc-members:
-   :show-inheritance: 
+   :show-inheritance:

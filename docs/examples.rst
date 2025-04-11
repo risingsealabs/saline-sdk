@@ -90,11 +90,10 @@ See ``examples/simple_matcher.py`` (this example is simplified from the script).
 .. code-block:: python
 
     import asyncio
-    import json
     from saline_sdk.account import Account
     from saline_sdk.transaction.bindings import (
         NonEmpty, Transaction, SetIntent, TransferFunds,
-        Send, Receive, Flow, Token, Restriction, Relation, All, Lit
+        Send, Receive, Token, Restriction, Relation, All, Lit
     )
     from saline_sdk.transaction.tx import prepareSimpleTx
     from saline_sdk.rpc.client import Client
@@ -113,9 +112,8 @@ See ``examples/simple_matcher.py`` (this example is simplified from the script).
         # Connect to the node
         client = Client(http_url=RPC_URL)
         try:
-            status = client.get_status()
-                    print(f"Connected to node: {status['node_info']['moniker']} @ {status['node_info']['network']} (Block: {status['sync_info']['latest_block_height']})")
-['latest_block_height']})")
+            status = await client.get_status()
+            print(f"Connected to node: {status['node_info']['moniker']} @ {status['node_info']['network']}")
         except Exception as e:
             print(f"ERROR: Could not connect to RPC @ {RPC_URL}. ({e})")
             return
@@ -131,17 +129,17 @@ See ``examples/simple_matcher.py`` (this example is simplified from the script).
             await asyncio.sleep(WAIT_SECONDS)
         except Exception as e:
             print(f"WARN: Faucet top-up failed: {e}")
-            # return # Optionally stop if faucet fails
+            return  # Stop if faucet fails - accounts need funds for swaps
 
         # Alice wants 1 BTC for 100 USDC
         alice_intent = All([
-            Restriction(Send(Flow(None, Token["USDC"])), Relation.EQ, Lit(100)),
-            Restriction(Receive(Flow(None, Token["BTC"])), Relation.EQ, Lit(1))
+            Restriction(Send(Token["USDC"]), Relation.EQ, Lit(100)),
+            Restriction(Receive(Token["BTC"]), Relation.EQ, Lit(1))
         ])
         # Bob wants 100 USDC for 1 BTC
         bob_intent = All([
-            Restriction(Send(Flow(None, Token["BTC"])), Relation.EQ, Lit(1)),
-            Restriction(Receive(Flow(None, Token["USDC"])), Relation.EQ, Lit(100))
+            Restriction(Send(Token["BTC"]), Relation.EQ, Lit(1)),
+            Restriction(Receive(Token["USDC"]), Relation.EQ, Lit(100))
         ])
 
         # Set intents
@@ -159,12 +157,24 @@ See ``examples/simple_matcher.py`` (this example is simplified from the script).
             print(f"ERROR: Failed to set intents: {e}")
             return
 
-        # --- Matcher Logic (Simplified - see simple_matcher.py for full implementation) ---
-        # In a real scenario, the matcher would query intents (client.get_all_intents())
-        # find the matching pair (alice_intent matches bob_intent), and extract addresses.
-        # Here we assume the matcher found Alice and Bob.
+        # --- Check Balances Before Proceeding ---
+        alice_info = await client.get_wallet_info_async(alice.public_key)
+        bob_info = await client.get_wallet_info_async(bob.public_key)
 
-        print("Matcher found pair: Alice <=> Bob. Preparing fulfillment transaction...")
+        # Verify Alice has enough USDC to fulfill her part
+        alice_usdc = alice_info.balances.get("USDC", 0) if alice_info.balances else 0
+        has_alice_funds = alice_usdc >= 100
+
+        # Verify Bob has enough BTC to fulfill his part
+        bob_btc = bob_info.balances.get("BTC", 0) if bob_info.balances else 0
+        has_bob_funds = bob_btc >= 1
+
+        if not has_alice_funds or not has_bob_funds:
+            print("Insufficient funds to complete swap - aborting")
+            return
+
+        # --- Matcher Logic ---
+        print("Both parties have sufficient funds. Proceeding with swap...")
         fulfillment_instruction1 = TransferFunds(source=alice.public_key, target=bob.public_key, funds={"USDC": 100})
         fulfillment_instruction2 = TransferFunds(source=bob.public_key, target=alice.public_key, funds={"BTC": 1})
         fulfillment_tx = Transaction(instructions=NonEmpty.from_list([fulfillment_instruction1, fulfillment_instruction2]))
@@ -174,9 +184,16 @@ See ``examples/simple_matcher.py`` (this example is simplified from the script).
         try:
             signed_fulfillment_tx = prepareSimpleTx(matcher, fulfillment_tx)
             result = await client.tx_commit(signed_fulfillment_tx)
-            print(f"Fulfillment Result: {json.dumps(result, indent=2)}")
+            print(f"Swap completed successfully. Hash: {result.get('hash')}")
         except Exception as e:
             print(f"ERROR: Fulfillment failed: {e}")
+
+        # Verify final balances
+        print("Verifying final balances...")
+        alice_after = await client.get_wallet_info_async(alice.public_key)
+        bob_after = await client.get_wallet_info_async(bob.public_key)
+        print(f"Alice final: {alice_after.balances}")
+        print(f"Bob final: {bob_after.balances}")
 
     if __name__ == "__main__":
         asyncio.run(setup_and_match_swap())
@@ -194,7 +211,7 @@ See ``examples/install_multisig_intent.py``.
     from saline_sdk.account import Account
     from saline_sdk.transaction.bindings import (
         NonEmpty, Transaction, SetIntent, Any,
-        Signature, Send, Flow, Token, Restriction, Relation, Lit
+        Signature, Send, Token, Restriction, Relation, Lit
     )
     from saline_sdk.transaction.tx import prepareSimpleTx
     from saline_sdk.rpc.client import Client
@@ -220,7 +237,7 @@ See ``examples/install_multisig_intent.py``.
 
         # Part 1: Restriction for small amounts (<=1 BTC)
         small_tx_restriction = Restriction(
-            Send(Flow(None, Token["BTC"])),
+            Send(Token["BTC"]),
             Relation.LE,
             Lit(1)
         )
@@ -283,7 +300,7 @@ See ``examples/restrictive_intent.py``.
 
     from saline_sdk.account import Account
     from saline_sdk.transaction.bindings import (
-        Flow, NonEmpty, Receive, SetIntent, Transaction, TransferFunds, Token
+        NonEmpty, Receive, SetIntent, Transaction, TransferFunds, Token
     )
     from saline_sdk.transaction.tx import prepareSimpleTx
     from saline_sdk.rpc.client import Client
@@ -335,7 +352,7 @@ See ``examples/restrictive_intent.py``.
 
         # Set restrictive intent - only allow receiving SALT from trusted sender
         print("Setting restrictive intent on wallet...")
-        restricted_intent = Receive(Flow(trusted.public_key, Token["SALT"]))
+        restricted_intent = Counterparty(trusted.public_key) & (Receive(Token.SALT) >= 10)
         set_intent = SetIntent(wallet.public_key, restricted_intent)
         tx = Transaction(instructions=NonEmpty.from_list([set_intent]))
         try:
@@ -398,7 +415,7 @@ See ``examples/faucet_and_swap_intent.py`` (this is a conceptual reconstruction)
     from saline_sdk.account import Account
     from saline_sdk.transaction.bindings import (
         NonEmpty, Transaction, SetIntent, TransferFunds,
-        Send, Receive, Flow, Token, Restriction, Relation, All, Lit
+        Send, Receive, Token, Restriction, Relation, All, Lit
     )
     from saline_sdk.transaction.tx import prepareSimpleTx
     from saline_sdk.rpc.client import Client
@@ -439,12 +456,12 @@ See ``examples/faucet_and_swap_intent.py`` (this is a conceptual reconstruction)
         # Create matching swap intents (Alice: 10 USDT for 0.001 BTC; Bob: 0.001 BTC for 10 USDT)
         print("Setting swap intents...")
         alice_intent = All([
-            Restriction(Send(Flow(None, Token["USDT"])), Relation.EQ, Lit(10)),
-            Restriction(Receive(Flow(None, Token["BTC"])), Relation.EQ, Lit(0.001))
+            Restriction(Send(Token["USDT"]), Relation.EQ, Lit(10)),
+            Restriction(Receive(Token["BTC"]), Relation.EQ, Lit(0.001))
         ])
         bob_intent = All([
-            Restriction(Send(Flow(None, Token["BTC"])), Relation.EQ, Lit(0.001)),
-            Restriction(Receive(Flow(None, Token["USDT"])), Relation.EQ, Lit(10))
+            Restriction(Send(Token["BTC"]), Relation.EQ, Lit(0.001)),
+            Restriction(Receive(Token["USDT"]), Relation.EQ, Lit(10))
         ])
 
         # Set intents on the blockchain
@@ -485,11 +502,195 @@ Additional Examples
 The SDK repository contains additional example files demonstrating more advanced use cases:
 
 1. ``install_swap_intent.py`` - Setting up an intent to enable automated swaps
-2. ``intent_queries_example.py`` - Querying the blockchain for intent information
-3. ``simple_matcher.py`` - Implementing a matching engine for swap intents
+2. ``query.py`` - Querying and parsing intents from the blockchain with detailed structure analysis
+3. ``simple_matcher.py`` - Implementing a matching engine for swap intents with balance verification
 4. ``fulfill_faucet_intent.py`` - Interacting with faucet intents to obtain tokens
-5. ``restrictive_intent.py`` - Creating a wallet that only accepts BTC from specific sources
-6. ``faucet_and_swap_intent.py`` - Requesting testnet tokens and creating swap intents
+5. ``install_restriction_intent.py`` - Creating a wallet with specific transfer restrictions
+6. ``install_multisig_intent.py`` - Setting up multi-signature requirements for an account
+
+Querying Intents
+============
+
+The ``query.py`` example demonstrates how to fetch and parse intents from the blockchain:
+
+.. code-block:: python
+
+    import asyncio
+    from saline_sdk.rpc.client import Client
+    import saline_sdk.transaction.bindings as bindings
+    from saline_sdk.rpc.query_responses import (
+        ParsedAllIntentsResponse,
+        ParsedIntentInfo,
+        contains_binding_type
+    )
+
+    RPC_URL = "https://node0.try-saline.com"
+
+    # --- Intent Analysis Helper ---
+    def is_likely_swap(intent: Optional[bindings.Intent]) -> bool:
+        """Check if an intent matches a simple swap heuristic (All containing Send and Receive)."""
+        if not isinstance(intent, bindings.All):
+            return False # Heuristic: Top level must be All
+
+        # Check if Send and Receive expressions exist anywhere within the 'All' structure
+        has_send = contains_binding_type(intent, bindings.Send)
+        has_receive = contains_binding_type(intent, bindings.Receive)
+
+        return has_send and has_receive
+
+    # --- Intent Structure Visualization ---
+    def print_intent_structure(intent: Optional[Union[bindings.Intent, bindings.Expr]], indent: int = 0) -> None:
+        """Print the structure of an Intent or Expr from bindings.py."""
+        if intent is None:
+            print(f"{' ' * indent}None")
+            return
+
+        # Get class name for the tag/type
+        intent_name = intent.__class__.__name__
+        print(f"{' ' * indent}{intent_name}", end="")
+
+        # Print specific attributes based on the class
+        if isinstance(intent, bindings.Counterparty):
+            print(f" (address={intent.address})")
+        elif isinstance(intent, bindings.Signature):
+            print(f" (signer={intent.signer})")
+        elif isinstance(intent, bindings.Lit):
+            print(f" (value={intent.value!r})")
+        elif isinstance(intent, (bindings.Receive, bindings.Send, bindings.Balance)):
+            print(f" (token={intent.token.name})") # Access enum name
+        else:
+            print() # Newline for non-leaf nodes
+
+        # Recursively print nested components
+        if isinstance(intent, (bindings.All, bindings.Any)):
+            for i, child in enumerate(intent.children):
+                print(f"{' ' * (indent+2)}Child {i+1}:")
+                print_intent_structure(child, indent + 4)
+        elif isinstance(intent, bindings.Restriction):
+            print(f"{' ' * indent}  LHS:")
+            print_intent_structure(intent.lhs, indent + 4)
+            print(f"{' ' * indent}  RHS:")
+            print_intent_structure(intent.rhs, indent + 4)
+            print(f"{' ' * indent}  Relation: {intent.relation.name}")
+
+    async def main():
+        client = Client(http_url=RPC_URL)
+
+        all_intents_response = await client.get_all_intents()
+        print(f"Found {len(all_intents_response.intents)} intent entries")
+
+        intent_types = {}
+        parsing_errors = 0
+        likely_swaps = 0
+
+        for intent_info in all_intents_response.intents.values():
+            if intent_info.error:
+                print(f"Parsing error for intent {intent_info.intent_id}: {intent_info.error}")
+                parsing_errors += 1
+                continue
+
+            if intent_info.parsed_intent:
+                intent_type = intent_info.parsed_intent.__class__.__name__
+                intent_types[intent_type] = intent_types.get(intent_type, 0) + 1
+
+                if is_likely_swap(intent_info.parsed_intent):
+                    likely_swaps += 1
+                    print(f"\nIntent {intent_info.intent_id[:8]}... appears to be a swap:")
+                    print_intent_structure(intent_info.parsed_intent)
+
+        print(f"\nSummary: Found {likely_swaps} swap intents out of {len(all_intents_response.intents)} total")
+        print(f"Failed to parse {parsing_errors} intent entries")
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+
+Intent Matching with Balance Verification
+==========================
+
+The ``simple_matcher.py`` example illustrates a complete swap matching workflow:
+
+1. Creating accounts with matching swap intents (Alice wants BTC, Bob wants USDC)
+2. Funding these accounts via the testnet faucet
+3. Querying the blockchain for all existing intents
+4. Extracting and analyzing swap details from the parsed intent structures
+5. Finding matching swap pairs based on the give/want parameters
+6. Verifying the balances of both parties before attempting to execute the swap
+7. Executing the swap as a matcher between accounts with sufficient funds
+
+The matching algorithm in ``simple_matcher.py`` consists of several key components:
+
+1. **Intent structure analysis**: Using recursive functions to extract swap parameters from complex intent trees
+   with code like:
+
+.. code-block:: python
+
+    def _find_swap_intent(intent_node: Optional[Intent]) -> Optional[Tuple[Dict, Dict]]:
+        """Recursively searches bindings structure for a Send/Receive pair under an 'All' node."""
+        if isinstance(intent_node, All):
+            send_details, receive_details = None, None
+            for child in intent_node.children:
+                if isinstance(child, Restriction):
+                    details = _extract_restriction_details(child)
+                    if details:
+                        if details['type'] == 'send':
+                            send_details = details
+                        elif details['type'] == 'receive':
+                            receive_details = details
+            if send_details and receive_details:
+                return send_details, receive_details
+        # [... additional recursive search logic ...]
+
+2. **Matching logic**: Finding pairs of complementary intents where one party's "give" matches another's "want":
+
+.. code-block:: python
+
+    # Find matching pairs (simple exact match)
+    matching_pairs = []
+    for i, swap1 in enumerate(swaps):
+        for j, swap2 in enumerate(swaps):
+            if i == j: continue  # Skip self-matches
+
+            is_match = (
+                swap1["give_token"] == swap2["want_token"] and
+                swap1["want_token"] == swap2["give_token"] and
+                swap1["give_amount"] == swap2["want_amount"] and
+                swap1["want_amount"] == swap2["give_amount"]
+            )
+            if is_match:
+                matching_pairs.append((swap1, swap2))
+                break
+
+3. **Balance verification**: Checking if both parties have sufficient funds before attempting the swap:
+
+.. code-block:: python
+
+    # Check balance for address 1
+    info1 = await client.get_wallet_info_async(addr1)
+    bal1 = info1.balances.get(swap1['give_token'], 0) if info1 and info1.balances else 0
+    has_bal1 = bal1 >= swap1['give_amount']
+
+    # Check balance for address 2
+    info2 = await client.get_wallet_info_async(addr2)
+    bal2 = info2.balances.get(swap2['give_token'], 0) if info2 and info2.balances else 0
+    has_bal2 = bal2 >= swap2['give_amount']
+
+    # Only proceed if both parties have sufficient funds
+    if has_bal1 and has_bal2:
+        # Execute the swap transaction
+
+4. **Swap execution**: The matcher (a third party) executes the transaction between accounts that have sufficient funds:
+
+.. code-block:: python
+
+    # Prepare Swap Transaction
+    instruction1 = TransferFunds(source=addr1, target=addr2, funds={swap1["give_token"]: swap1["give_amount"]})
+    instruction2 = TransferFunds(source=addr2, target=addr1, funds={swap2["give_token"]: swap2["give_amount"]})
+    tx = Transaction(instructions=NonEmpty.from_list([instruction1, instruction2]))
+    signed_tx = prepareSimpleTx(matcher_account, tx)
+
+    # Submit and verify results
+    result = await client.tx_commit(signed_tx)
+    # [... check result and print balances after the swap ...]
 
 Using the Testnet Module
 =================
@@ -548,3 +749,39 @@ The Saline SDK includes a testnet module for development purposes. The faucet fu
 
     if __name__ == "__main__":
         asyncio.run(request_testnet_tokens())
+
+RPC Query Response Bindings
+===============================
+
+The module ``saline_sdk.rpc.query_responses`` provides structured parsing and analysis of blockchain data:
+
+.. code-block:: python
+
+    from saline_sdk.rpc.query_responses import (
+        ParsedIntentInfo,        # Information about a single intent
+        ParsedAllIntentsResponse,  # Collection of all intents from the blockchain
+        ParsedWalletInfo,        # Account balance and intent information
+        contains_binding_type,   # Helper to analyze intent structure -> check if intent contains
+        parse_dict_to_binding_intent  # Converts raw JSON to bindings.py object
+    )
+
+These bindings make it easier to:
+
+1. Parse raw intent data from the blockchain into structured Python objects
+2. Query and analyze intent structures with helper functions
+3. Process wallet information including balances and active intents
+4. Identify specific patterns like swaps in complex intent structures
+
+Example of using the helper function:
+
+.. code-block:: python
+
+    # Check if an intent contains both Send and Receive components (likely a swap)
+    def is_likely_swap(intent: Optional[bindings.Intent]) -> bool:
+        return (intent is not None and
+                contains_binding_type(intent, bindings.Send) and
+                contains_binding_type(intent, bindings.Receive))
+
+    # Check the ParsedIntentInfo returned from get_all_intents
+    if is_likely_swap(intent_info.parsed_intent):
+        print(f"Intent {intent_info.intent_id} appears to be a swap intent")

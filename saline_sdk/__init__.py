@@ -28,7 +28,7 @@ from .transaction.tx import sign, encodeSignedTx
 from .transaction.instructions import transfer, swap, set_intent
 
 # Common token enum
-from .rpc.client import Token
+from .transaction.bindings import Token
 
 # Testnet utilities - New import location
 from .rpc.testnet.faucet import top_up

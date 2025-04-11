@@ -1,5 +1,5 @@
 from saline_sdk.account import Account
-from saline_sdk.transaction.bindings import Flow, Lit, NonEmpty, Receive, SetIntent, Token, Transaction, TransferFunds
+from saline_sdk.transaction.bindings import Counterparty, Lit, NonEmpty, Receive, SetIntent, Token, Transaction, TransferFunds
 from saline_sdk.transaction.tx import prepareSimpleTx
 from saline_sdk.rpc.client import Client
 import asyncio
@@ -25,7 +25,7 @@ async def main():
     await top_up(account=untrusted, client=rpc)
 
     # Set restrictive intent
-    restricted_intent = Receive(Flow(Lit(trusted.public_key), Token.SALT)) >= 10
+    restricted_intent = Counterparty(trusted.public_key) & (Receive(Token.SALT) >= 10)
     set_intent = SetIntent(wallet.public_key, restricted_intent)
     tx = Transaction(instructions=NonEmpty.from_list([set_intent]))
     intent_result = await rpc.tx_commit(prepareSimpleTx(wallet, tx))
@@ -40,7 +40,7 @@ async def main():
     transfer1 = TransferFunds(
         source=trusted.public_key,
         target=wallet.public_key,
-        funds={"SALT": 9}
+        funds={"SALT": 11}
     )
     tx1 = Transaction(instructions=NonEmpty.from_list([transfer1]))
     result1 = await rpc.tx_commit(prepareSimpleTx(trusted, tx1))
@@ -74,6 +74,7 @@ async def main():
     )
     tx3 = Transaction(instructions=NonEmpty.from_list([transfer3]))
     result3 = await rpc.tx_commit(prepareSimpleTx(trusted, tx3))
+    print(result3)
     print(f"Transaction result: {'ACCEPTED' if result3.get('error') is None else 'REJECTED: ' + str(result3.get('error'))}")
 
     # Check final balance

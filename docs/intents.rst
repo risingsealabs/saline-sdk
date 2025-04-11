@@ -40,26 +40,9 @@ Expressions are used within ``Restriction`` intents to evaluate conditions based
 
 - ``Lit(value)``: Represents a literal value (e.g., number, string).
 - ``Balance(token: str)``:Balance of the specified token for the account hosting the intent.
-- ``Receive(flow: Flow)``: Represents the amount of a token received according to the specified ``Flow``.
-- ``Send(flow: Flow)``: Represents the amount of a token sent according to the specified ``Flow``.
+- ``Receive(token: Token)``: Represents the amount of a token received.
+- ``Send(token: Token)``: Represents the amount of a token sent.
 - ``Arithmetic2(op: ArithOp, lhs, rhs)``: Elementary arithmetic operations (Add, Sub, Mul, Div) over expressions.
-
-Flow
-----
-
-A ``Flow`` object specifies the movement of a token, potentially involving a specific counterparty:
-
-.. code-block:: python
-
-    from saline_sdk.transaction.bindings import Flow, Token
-
-    # Flow arguments: (counterparty_pk: str | None, token: str)
-
-    # Represents a flow of any amount of ETH to/from any counterparty
-    any_eth_flow = Flow(None, Token[\"ETH\"]) # Correct Token syntax
-
-    # Represents a flow of any amount of USDC but only with a specific counterparty
-    specific_usdc_flow = Flow(\"pk_of_counterparty...\", Token[\"USDC\"])
 
 Operator Syntax (Optional Shorthands)
 =====================================
@@ -79,15 +62,6 @@ For convenience, the SDK *may* overload some Python operators as shorthands for 
 2. **Token**: The token type for the flow
   - ``Token.BTC``, ``Token.ETH``, etc.
 
-Examples:
-
-.. code-block:: python
-
-    # Flow of ETH to/from any account
-    eth_flow = Flow(None, Token.ETH)
-
-    # Flow of USDT to/from a specific account
-    usdt_flow = Flow(Lit("counterparty_public_key"), Token.USDT)
 
 Common Intent Patterns
 ==================
@@ -98,17 +72,17 @@ Swap Intent Pattern
 .. code-block:: python
 
     # Define a concrete swap intent: I want to swap 2 ETH for 100 USDT
-    intent = Send(Flow(None, Token.ETH)) <= 2 & Receive(Flow(None, Token.USDT)) >= 100
+    intent = Send(Token.ETH) <= 2 & Receive(Token.USDT) >= 100
 
     # Define a rate swap intent: I want 100 USDT for each 2 ETH
-    intent = Send(Flow(None, Token.ETH)) * 2 <= Receive(Flow(None, Token.USDT)) * 100
+    intent = Send(Token.ETH) * 2 <= Receive(Token.USDT) * 100
 
 Breaking Down the Pattern:
 
-1. ``Send(Flow(None, Token.ETH))``: the amount of sent ETH
+1. ``Send(Token.ETH)``: the amount of sent ETH
 2. ``* 2``: multiplies by 2
 3. ``<=``: Sets up the exchange relationship (less than or equal)
-4. ``Receive(Flow(None, Token.USDT))``: the amount of received USDT
+4. ``Receive(Token.USDT)``: the amount of received USDT
 5. ``* 100``: multiplies by 100
 
 Multi-Signature Intent Pattern
@@ -133,7 +107,7 @@ Complete Swap Intent Example
 
     from saline_sdk.account import Account
     from saline_sdk.transaction.bindings import (
-        NonEmpty, Transaction, SetIntent, Flow, Token,
+        NonEmpty, Transaction, SetIntent, Token,
         Send, Receive
     )
     from saline_sdk.transaction.tx import prepareSimpleTx
@@ -149,7 +123,7 @@ Complete Swap Intent Example
     take_amount = 100
 
     # Create swap intent using operator syntax
-    intent = Send(Flow(None, give_token)) * give_amount <= Receive(Flow(None, take_token)) * take_amount
+    intent = Send(give_token) * give_amount <= Receive(take_token) * take_amount
 
     # Create a SetIntent instruction and transaction
     set_intent = SetIntent(account.public_key, intent)
@@ -171,7 +145,7 @@ Creating an intent that expires after a specific time:
 .. code-block:: python
 
     # Base intent (e.g., token swap)
-    base_intent = Send(Flow(None, Token.ETH)) * 1 <= Receive(Flow(None, Token.USDT)) * 50
+    base_intent = Send(Token.ETH) * 1 <= Receive(Token.USDT) * 50
 
     # Set expiry time (Unix timestamp) - e.g., 1 day from now
     import time
@@ -189,7 +163,7 @@ Creating an intent that can only be used a specific number of times:
 .. code-block:: python
 
     # Base intent
-    base_intent = Send(Flow(None, Token.ETH)) * 0.1 <= Receive(Flow(None, Token.USDT)) * 5
+    base_intent = Send(Token.ETH) * 0.1 <= Receive(Token.USDT) * 5
 
     # Create an intent limited to 5 uses
     limited_intent = Finite(5, base_intent)
@@ -200,5 +174,4 @@ Best Practices
 1. **Use Explicit Bindings**: Prefer `Restriction`, `All`, `Any` for clarity over operator shorthands, especially for non-trivial intents.
 2. **Start Simple**: Begin with basic patterns (like fixed swaps) and gradually add complexity (`Any`, `Temporary`, `Finite`).
 3. **Test Extensively**: Verify intents behave as expected with various transaction patterns.
-4. **Use `None` for Counterparty**: When possible, use `Flow(None, ...)` for maximum interoperability.
-5. **Consider Modifiers**: For sensitive operations, consider adding `Temporary` or `Finite` constraints.
+4. **Consider Modifiers**: For sensitive operations, consider adding `Temporary` or `Finite` constraints.

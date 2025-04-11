@@ -7,7 +7,7 @@ These tests require a running Saline node to execute successfully.
 
 import pytest
 import json
-from saline_sdk.rpc.client import Client, Token
+from saline_sdk.rpc.client import Client
 from saline_sdk.transaction.bindings import (
     Intent, All, Any, Finite, Temporary, Signature,
     Lit, Restriction, Relation, Token as SDKToken

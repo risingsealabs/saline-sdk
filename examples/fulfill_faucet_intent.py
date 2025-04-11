@@ -62,7 +62,7 @@ async def get_tokens_from_faucet_dynamic(client, account, faucet_intent):
                 restriction.get("relation") == "EQ"):
 
                 # Extract the token and amount
-                token = restriction.get("lhs", {}).get("flow", {}).get("token")
+                token = restriction.get("lhs", {}).get("token")
                 amount = restriction.get("rhs", {}).get("value")
 
                 if token and amount is not None:

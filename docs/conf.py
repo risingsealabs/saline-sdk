@@ -83,10 +83,6 @@ try:
     if hasattr(bindings, 'Arithmetic2'):
         bindings.Arithmetic2.__doc__ = ARITHMETIC2_DOC
 
-    # Apply docstrings to Flow class
-    if hasattr(bindings, 'Flow'):
-        bindings.Flow.__doc__ = FLOW_DOC
-
     # Apply docstrings to intent classes
     if hasattr(bindings, 'Intent'):
         bindings.Intent.__doc__ = INTENT_DOC

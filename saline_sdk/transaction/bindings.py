@@ -355,38 +355,38 @@ class Balance(Expr):
 
 
 class Receive(Expr):
-  def __init__(self, flow: 'Flow'):
+  def __init__(self, token: Token):
     super().__init__()
-    self.flow = flow
+    self.token = token
 
   @staticmethod
   def from_json(d):
-    return Receive(Flow.from_json(d["flow"]))
+    return Receive(Token.from_json(d["token"]))
 
   @staticmethod
   def to_json(x: 'Receive'):
     if (not isinstance(x,Receive)):
       raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Receive)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
-    d["flow"] = Flow.to_json(x.flow)
+    d["token"] = Token.to_json(x.token)
     return d
 
 
 class Send(Expr):
-  def __init__(self, flow: 'Flow'):
+  def __init__(self, token: Token):
     super().__init__()
-    self.flow = flow
+    self.token = token
 
   @staticmethod
   def from_json(d):
-    return Send(Flow.from_json(d["flow"]))
+    return Send(Token.from_json(d["token"]))
 
   @staticmethod
   def to_json(x: 'Send'):
     if (not isinstance(x,Send)):
       raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Send)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
-    d["flow"] = Flow.to_json(x.flow)
+    d["token"] = Token.to_json(x.token)
     return d
 
 
@@ -430,26 +430,6 @@ class Arithmetic2(Expr):
     return d
 
 
-class Flow():
-  def __init__(self, target: Optional[Expr], token: Token):
-    super().__init__()
-    self.target = target
-    self.token = token
-
-  @staticmethod
-  def from_json(d):
-    return Flow(None if d["target"] == None else Expr.from_json(d["target"]), Token.from_json(d["token"]))
-
-  @staticmethod
-  def to_json(x: 'Flow'):
-    if (not isinstance(x,Flow)):
-      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Flow)+ '\n' + '  ' + 'Got: ' + str(type(x)))
-    d = dict()
-    d["target"] = None if x.target == None else Expr.to_json(x.target)
-    d["token"] = Token.to_json(x.token)
-    return d
-
-
 # Intent types
 
 class Intent():
@@ -463,6 +443,8 @@ class Intent():
         return All.from_json(d)
       case "Any":
         return Any.from_json(d)
+      case "Counterparty":
+        return Counterparty.from_json(d)
       case "Restriction":
         return Restriction.from_json(d)
       case "Finite":
@@ -482,6 +464,9 @@ class Intent():
         return dict(sorted(d.items()))
       case Any():
         d = {"tag" : "Any"} | Any.to_json(x)
+        return dict(sorted(d.items()))
+      case Counterparty():
+        d = {"tag" : "Counterparty"} | Counterparty.to_json(x)
         return dict(sorted(d.items()))
       case Restriction():
         d = {"tag" : "Restriction"} | Restriction.to_json(x)
@@ -538,6 +523,24 @@ class Any(Intent):
     d = dict()
     d["threshold"] = x.threshold
     d["children"] = list(map(Intent.to_json, x.children))
+    return d
+
+
+class Counterparty(Intent):
+  def __init__(self, address: G2Element):
+    super().__init__()
+    self.address = address
+
+  @staticmethod
+  def from_json(d):
+    return Counterparty(d["address"])
+
+  @staticmethod
+  def to_json(x: 'Counterparty'):
+    if (not isinstance(x,Counterparty)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Counterparty)+ '\n' + '  ' + 'Got: ' + str(type(x)))
+    d = dict()
+    d["address"] = x.address
     return d
 
 
