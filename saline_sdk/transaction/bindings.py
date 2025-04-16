@@ -178,7 +178,7 @@ class AllW(Witness):
 
 
 class AnyW(Witness):
-  def __init__(self, children: dict[uint64,Witness]):
+  def __init__(self, children: dict[uint64, Witness]):
     super().__init__()
     self.children = children
 
@@ -738,7 +738,7 @@ class Instruction():
 
 
 class TransferFunds(Instruction):
-  def __init__(self, source: G2Element, target: G2Element, funds: dict[Token,float64]):
+  def __init__(self, source: G2Element, target: G2Element, funds: dict[Token, float64]):
     super().__init__()
     self.source = source
     self.target = target
