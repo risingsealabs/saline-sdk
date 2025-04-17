@@ -28,7 +28,6 @@ See ``examples/basic_transaction.py``.
         root_account = Account.create()
         print("root account mnemonic:", root_account._mnemonic)
 
-
         # Derive subaccounts for sender and receiver
         sender = root_account.create_subaccount(label="sender")
         receiver = root_account.create_subaccount(label="receiver")
@@ -47,9 +46,8 @@ See ``examples/basic_transaction.py``.
         # Connect to the Saline node
         client = Client(http_url=RPC_URL)
         try:
-            status = client.get_status()
-                    print(f"Connected to node: {status['node_info']['moniker']} @ {status['node_info']['network']} (Block: {status['sync_info']['latest_block_height']})")
-['latest_block_height']})")
+            status = await client.get_status()
+            print(f"Connected to node: {status['node_info']['moniker']} @ {status['node_info']['network']} (Block: {status['sync_info']['latest_block_height']})")
         except Exception as e:
             print(f"ERROR: Could not connect to RPC @ {RPC_URL}. ({e})")
             return
@@ -57,18 +55,16 @@ See ``examples/basic_transaction.py``.
         # Fund the sender account (necessary for the transfer)
         print("Funding sender account via faucet...")
         try:
-            # Import top_up function
             from saline_sdk.rpc.testnet.faucet import top_up
             await top_up(account=sender, client=client, tokens={"USDC": 50})
             print("Faucet funding successful.")
-            # Add a small delay for faucet transaction processing
-            await asyncio.sleep(3)
+            await asyncio.sleep(3)  # Small delay for faucet transaction processing
         except Exception as e:
             print(f"WARN: Faucet top-up failed: {e}")
-            # Decide whether to continue or return based on faucet requirement
-            # return # Example: stop if faucet fails
+            # Optional: return here if funding is required
+            # return
 
-        # Sign the transaction using the sender's account and submit
+        # Sign and submit the transaction
         print("Submitting transfer transaction...")
         try:
             signed_tx = prepareSimpleTx(sender, tx)
@@ -79,6 +75,7 @@ See ``examples/basic_transaction.py``.
 
     if __name__ == "__main__":
         asyncio.run(main())
+
 
 Token Swap (Intent-Based)
 =========================
@@ -232,45 +229,37 @@ See ``examples/install_multisig_intent.py``.
 
         # Define the multisig intent
         # Requires either:
-        # 1. The transaction only sends <= 1 BTC (using Restriction binding)
-        # 2. The transaction has at least 2 of 3 signatures (using Signature binding)
+        # 1. The transaction only sends <= 1 BTC
+        # 2. The transaction has at least 2 of 3 signatures
 
-        # Part 1: Restriction for small amounts (<=1 BTC)
         small_tx_restriction = Restriction(
             Send(Token["BTC"]),
             Relation.LE,
             Lit(1)
         )
 
-        # Part 2: 2-of-3 multisignature requirement
         signatures = [
             Signature(signer1.public_key),
             Signature(signer2.public_key),
             Signature(signer3.public_key)
         ]
-        # Any(threshold, list_of_conditions) - requires threshold conditions to be met
         multisig_requirement = Any(2, signatures)
 
-        # Combine the two conditions with OR (using Any with threshold 1)
-        # Any(1, [...]) means: Is condition 1 OR condition 2 true?
+        # Combine with OR logic
         multisig_intent = Any(1, [small_tx_restriction, multisig_requirement])
 
-        # Create a SetIntent instruction to install the intent on the multisig wallet
+        # Create and submit SetIntent transaction
         set_intent_instruction = SetIntent(multisig_wallet.public_key, multisig_intent)
-
         tx = Transaction(instructions=NonEmpty.from_list([set_intent_instruction]))
 
-        # Connect to the node
         client = Client(http_url=RPC_URL)
         try:
-            status = client.get_status()
-                    print(f"Connected to node: {status['node_info']['moniker']} @ {status['node_info']['network']} (Block: {status['sync_info']['latest_block_height']})")
-['latest_block_height']})")
+            status = await client.get_status()
+            print(f"Connected to node: {status['node_info']['moniker']} @ {status['node_info']['network']} (Block: {status['sync_info']['latest_block_height']})")
         except Exception as e:
             print(f"ERROR: Could not connect to RPC @ {RPC_URL}. ({e})")
             return
 
-        # Sign with the wallet being modified and submit
         print("Submitting SetIntent transaction...")
         try:
             signed_tx = prepareSimpleTx(multisig_wallet, tx)
@@ -281,6 +270,7 @@ See ``examples/install_multisig_intent.py``.
 
     if __name__ == "__main__":
         asyncio.run(create_and_install_multisig_intent())
+
 
 Restrictive Intent
 ===============

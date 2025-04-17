@@ -6,7 +6,7 @@ authors = [
     {name = "Rising Sea Labs", email = "info@risingsealabs.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 license = {text = "MIT"}
 keywords = ["blockchain", "cryptocurrency", "saline", "web3"]
 classifiers = [
