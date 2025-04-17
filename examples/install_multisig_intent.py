@@ -18,7 +18,7 @@ from saline_sdk.transaction.tx import prepareSimpleTx
 from saline_sdk.rpc.client import Client
 
 TEST_MNEMONIC = "excuse ozone east canoe duck tortoise dentist approve bid wagon area funny"
-RPC_URL = "http://localhost:26657"
+RPC_URL = "https://node0.try-saline.com"
 
 async def create_and_install_multisig_intent():
     print("=== Creating a Multisig Intent using Operator Syntax ===\n")
