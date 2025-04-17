@@ -20,32 +20,44 @@ Getting Started
 
 To start using the Saline SDK, follow these steps:
 
-1. Install the SDK using pip:
+1. Set up your Python 3.12 virtual environment:
+
+   .. code-block:: bash
+
+       python3.12 -m venv venv
+       source venv/bin/activate
+       pip install --upgrade pip
+
+
+
+2. Install the SDK using pip:
 
    .. code-block:: bash
 
        pip install saline-sdk
 
-2. Initialize the SDK with your node URL:
+3. Initialize the SDK with your node URL:
 
    .. code-block:: python
 
-       from saline_sdk import Client
+    import asyncio
+    from saline_sdk import Client
 
-       # Connect to a Saline node using the http_url parameter
-       client = Client(http_url=\"https://node0.try-saline.com\")
+    async def main():
+        client = Client(http_url="https://node0.try-saline.com")
+        try:
+            status = await client.get_status()  # Await the async function
+            print(f"Connected to node: {status['node_info']['moniker']} @ {status['node_info']['network']} (Block: {status['sync_info']['latest_block_height']})")
+        except Exception as e:
+            print(f"Failed to connect or get status: {e}")
 
-       # Check connection by calling get_status()
-       try:
-           status = client.get_status() # Synchronous call
-                   print(f"Connected to node: {status['node_info']['moniker']} @ {status['node_info']['network']} (Block: {status['sync_info']['latest_block_height']})")
-['latest_block_height']})")
-       except Exception as e:
-           print(f"Failed to connect or get status: {e}")
+    if __name__ == "__main__":
+        asyncio.run(main())
+  
 
-3. See the :doc:`quickstart` guide for more detailed instructions.
+4. See the :doc:`quickstart` guide for more detailed instructions.
 
 Version Compatibility
 -------------------
 
-The Saline SDK requires Python 3.12 or higher. It is designed to work with Saline nodes running version 0.1.0 and above.
+Saline SDK is currently compatible upto Python 3.12 only. Python 3.13+ is not yet supported. It is designed to work with Saline nodes running version 0.1.0 and above.
