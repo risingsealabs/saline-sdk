@@ -1,6 +1,6 @@
 [project]
 name = "saline-sdk"
-version = "0.2.0"
+version = "0.2.1"
 description = "Official SDK for interacting with the Saline blockchain network"
 authors = [
     {name = "Rising Sea Labs", email = "info@risingsealabs.com"}
