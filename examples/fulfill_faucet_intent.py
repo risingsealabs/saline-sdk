@@ -47,7 +47,8 @@ async def get_tokens_from_faucet(client, account):
     if tx_is_accepted(result):
         print(f"Success! Tokens received.")
     else:
-        print(f"Error: {print_tx_errors(result)}")
+        print("Error occurred during transaction:")
+        print_tx_errors(result)
 
 async def main():
     client = Client(http_url=RPC_URL)
