@@ -1,12 +1,12 @@
 [project]
 name = "saline-sdk"
-version = "0.2.0"
+version = "0.2.2"
 description = "Official SDK for interacting with the Saline blockchain network"
 authors = [
     {name = "Rising Sea Labs", email = "info@risingsealabs.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 license = {text = "MIT"}
 keywords = ["blockchain", "cryptocurrency", "saline", "web3"]
 classifiers = [

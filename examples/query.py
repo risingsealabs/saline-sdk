@@ -9,7 +9,7 @@ from saline_sdk.rpc.query_responses import (
     contains_binding_type
 )
 
-RPC_URL = "http://localhost:26657"
+RPC_URL = "https://node0.try-saline.com"
 
 # --- Simplified Swap Check (using imported helper) ---
 
