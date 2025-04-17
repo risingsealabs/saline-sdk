@@ -33,6 +33,10 @@ class ParsedWalletInfo:
     raw_wallet_data: Any = None # Keep raw data for debugging/completeness
     error: Optional[str] = None # Parsing error message
 
+    @staticmethod
+    def parse_intent_to_json(x: bindings.Intent):
+      return bindings.Intent.to_json(x)
+
 # --- Optimized Helper Functions for Analyzing Parsed Bindings ---
 
 # Dictionary mapping composite types to the names of attributes holding sub-nodes

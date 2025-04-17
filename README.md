@@ -22,7 +22,7 @@ The Saline SDK provides a comprehensive, Web3-like interface for building applic
 
 ## Installation
 
-Requires Python 3.12+
+Requires Python ≥3.12.0 and <3.13.
 
 ```bash
 # Install using pip
@@ -158,7 +158,7 @@ async def send_funds(client: Client, sender_wallet: Account, recipient_pk: str, 
 
 ## Documentation
 
-For complete documentation, including advanced topics like Intents, visit [the Saline SDK documentation](https://saline-sdk.readthedocs.io/). (Ensure this link is correct)
+For complete documentation, including advanced topics like Intents, visit [the Saline SDK documentation](https://saline-sdk.readthedocs.io/).
 
 ## Development
 
@@ -222,4 +222,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Security
 
-If you discover a security vulnerability within Saline SDK, please send an e-mail to security@risingsealabs.com.
+If you discover a security vulnerability within Saline SDK, please send an e-mail to security[at]risingsealabs.com.

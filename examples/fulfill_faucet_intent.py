@@ -5,21 +5,22 @@ Demonstrates how to fulfill a faucet intent using the Saline SDK.
 
 Supports:
 - Simple scenario of a fixed amount of tokens
-- Complex scenario where the amount of tokens allowed is derived from the intent.
+
+For a more advanced approach dynamically deriving the faucet bounds, see saline-sdk/rpc/testnet/faucet.py
 """
 
 import asyncio
 from saline_sdk.account import Account
 from saline_sdk.transaction.bindings import (
-    NonEmpty, Transaction, TransferFunds
+    NonEmpty, Transaction, TransferFunds, Intent
 )
-from saline_sdk.transaction.tx import prepareSimpleTx
+from saline_sdk.transaction.tx import prepareSimpleTx, tx_is_accepted, print_tx_errors
 from saline_sdk.rpc.client import Client
 
 # Faucet address is known and stable
 FAUCET_ADDRESS = "826e40d74167b3dcf957b55ad2fee7ba3a76b0d8fdace469d31540b016697c012578352b65613d43c496a4e704b71cd5"
 TEST_MNEMONIC = "excuse ozone east canoe duck tortoise dentist approve bid wagon area funny"
-RPC_URL = "http://localhost:26657"
+RPC_URL = "https://node0.try-saline.com"
 
 async def get_tokens_from_faucet(client, account):
     """Request tokens from the faucet using hardcoded amounts"""
@@ -43,56 +44,10 @@ async def get_tokens_from_faucet(client, account):
 
     result = await client.tx_commit(signed_tx)
 
-    if result.get("error") is None:
+    if tx_is_accepted(result):
         print(f"Success! Tokens received.")
     else:
-        print(f"Error: {result.get('error')}")
-
-async def get_tokens_from_faucet_dynamic(client, account, faucet_intent):
-    """Request tokens from the faucet with amounts derived from the faucet intent"""
-
-    funds = {}
-
-    # The faucet intent has a structure with children (restrictions) for each token
-    # We here extract the tokens we're allowed to receive and populate our funds dictionary
-    if "children" in faucet_intent:
-        for restriction in faucet_intent["children"]:
-            if (restriction.get("tag") == "Restriction" and
-                restriction.get("lhs", {}).get("tag") == "Send" and
-                restriction.get("relation") == "EQ"):
-
-                # Extract the token and amount
-                token = restriction.get("lhs", {}).get("token")
-                amount = restriction.get("rhs", {}).get("value")
-
-                if token and amount is not None:
-                    # Convert float amounts to integers
-                    if isinstance(amount, float):
-                        amount = int(amount)
-                    funds[token] = amount
-
-    if not funds:
-        print("Error: Could not extract token amounts from faucet intent.")
-        return
-
-    print(f"Requesting tokens: {funds}")
-
-    # Create a transfer instruction with the extracted amounts
-    instruction = TransferFunds(
-        source=FAUCET_ADDRESS,
-        target=account.public_key,
-        funds=funds
-    )
-
-    tx = Transaction(instructions=NonEmpty.from_list([instruction]))
-    signed_tx = prepareSimpleTx(account, tx)
-
-    result = await client.tx_commit(signed_tx)
-
-    if result.get("error") is None:
-        print(f"Success! Tokens received.")
-    else:
-        print(f"Error: {result.get('error')}")
+        print(f"Error: {print_tx_errors(result)}")
 
 async def main():
     client = Client(http_url=RPC_URL)
@@ -101,7 +56,9 @@ async def main():
     alice = account.create_subaccount(label="alice")
 
     # Verify faucet exists
-    faucet = await client.get_intent_async(FAUCET_ADDRESS)
+    faucet = await client.get_wallet_info_async(FAUCET_ADDRESS)
+    if faucet:
+        print(Intent.to_json(faucet.parsed_intent))
     if not faucet:
         print(f"Error: Faucet not found at {FAUCET_ADDRESS}")
         return
@@ -110,19 +67,13 @@ async def main():
 
     # Check initial balance
     initial = await client.get_wallet_info_async(alice.public_key)
-    print(f"Initial balance: {initial.get('balances', [])}")
+    print(f"Initial balance: {initial.balances}")
 
-    # Choose approach: set to True for dynamic, False for hardcoded
-    use_dynamic_approach = True
-
-    if use_dynamic_approach:
-        await get_tokens_from_faucet_dynamic(client, alice, faucet)
-    else:
-        await get_tokens_from_faucet(client, alice)
+    await get_tokens_from_faucet(client, alice)
 
     # Check new balance
     updated = await client.get_wallet_info_async(alice.public_key)
-    print(f"New balance: {updated.get('balances', [])}")
+    print(f"New balance: {updated.balances}")
 
 if __name__ == "__main__":
     asyncio.run(main())
