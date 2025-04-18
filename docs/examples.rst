@@ -10,18 +10,17 @@ Examples Defined in SRC
 
 The SDK repository contains additional example files demonstrating more advanced use cases:
 
-1. ``install_swap_intent.py`` - Setting up an intent to enable automated swaps
-2. ``query.py`` - Querying and parsing intents from the blockchain with detailed structure analysis
-3. ``simple_matcher.py`` - Implementing a matching engine for swap intents with balance verification
-4. ``fulfill_faucet_intent.py`` - Interacting with the faucet intent directly to obtain tokens
-5. ``install_restriction_intent.py`` - Creating a wallet with specific transfer restrictions
-6. ``install_multisig_intent.py`` - Setting up multi-signature requirements for an account
-
+1. `install_swap_intent.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/install_swap_intent.py>`_ – Setting up an intent to enable automated swaps
+2. `query.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/query.py>`_ – Querying and parsing intents from the blockchain with detailed structure analysis
+3. `simple_matcher.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/simple_matcher.py>`_ – Implementing a matching engine for swap intents with balance verification
+4. `fulfill_faucet_intent.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/fulfill_faucet_intent.py>`_ – Interacting with the faucet intent directly to obtain tokens
+5. `install_restriction_intent.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/install_restriction_intent.py>`_ – Creating a wallet with specific transfer restrictions  
+6. `install_multisig_intent.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/install_multisig_intent.py>`_ – Setting up multi-signature requirements for an account  
 Basic Transaction
 ===============
 
 This example demonstrates how to create and submit a basic transfer transaction.
-See ``examples/basic_transaction.py``.
+See the `basic_transaction.py GitHub <https://github.com/risingsealabs/saline-sdk/blob/main/examples/basic_transaction.py>`_.
 
 .. code-block:: python
 
@@ -29,64 +28,40 @@ See ``examples/basic_transaction.py``.
     import json
     from saline_sdk.account import Account
     from saline_sdk.rpc.client import Client
-    from saline_sdk.transaction.bindings import NonEmpty, Transaction, TransferFunds
+    from saline_sdk.transaction.instructions import transfer
+    from saline_sdk.transaction.bindings import NonEmpty, Transaction
     from saline_sdk.transaction.tx import prepareSimpleTx
 
     TEST_MNEMONIC = "excuse ozone east canoe duck tortoise dentist approve bid wagon area funny"
-    RPC_URL = "https://node0.try-saline.com"
+    RPC_URL = "https://node1.try-saline.com"
 
     async def main():
-        # Create a temporary root account for this run
-        root_account = Account.create()
-        print("root account mnemonic:", root_account._mnemonic)
+        # Create the root account from mnemonic
+        account = Account.from_mnemonic(TEST_MNEMONIC)
 
         # Derive subaccounts for sender and receiver
-        sender = root_account.create_subaccount(label="sender")
-        receiver = root_account.create_subaccount(label="receiver")
+        sender = account.create_subaccount(label="sender")
+        receiver = account.create_subaccount(label="receiver")
 
-        # Create a TransferFunds instruction
-        transfer_instruction = TransferFunds(
-            source=sender.public_key,
-            target=receiver.public_key,
-            funds={"USDC": 20}
+        transfer_instruction = transfer(
+            sender=sender.public_key,
+            recipient=receiver.public_key,
+            token="USDC",
+            amount=20
         )
 
         tx = Transaction(
             instructions=NonEmpty.from_list([transfer_instruction]),
         )
 
-        # Connect to the Saline node
-        client = Client(http_url=RPC_URL)
-        try:
-            status = await client.get_status()
-            print(f"Connected to node: {status['node_info']['moniker']} @ {status['node_info']['network']} (Block: {status['sync_info']['latest_block_height']})")
-        except Exception as e:
-            print(f"ERROR: Could not connect to RPC @ {RPC_URL}. ({e})")
-            return
-
-        # Fund the sender account (necessary for the transfer)
-        print("Funding sender account via faucet...")
-        try:
-            from saline_sdk.rpc.testnet.faucet import top_up
-            await top_up(account=sender, client=client, tokens={"USDC": 50})
-            print("Faucet funding successful.")
-            await asyncio.sleep(3)  # Small delay for faucet transaction processing
-        except Exception as e:
-            print(f"WARN: Faucet top-up failed: {e}")
-            # Optional: return here if funding is required
-            # return
-
-        # Sign and submit the transaction
-        print("Submitting transfer transaction...")
-        try:
-            signed_tx = prepareSimpleTx(sender, tx)
-            result = await client.tx_commit(signed_tx)
-            print(f"RPC response: {json.dumps(result, indent=2)}")
-        except Exception as e:
-            print(f"ERROR: Transaction submission failed: {e}")
+        rpc = Client(http_url=RPC_URL)
+        # Submit transaction and wait for validation
+        result = await rpc.tx_broadcast(prepareSimpleTx(sender,tx))
+        print(f"\nRPC response: {json.dumps(result, indent=2)}")
 
     if __name__ == "__main__":
         asyncio.run(main())
+
 
 
 Token Swap (Intent-Based)
@@ -211,7 +186,7 @@ Multi-Signature Intent
 =========================
 
 This example demonstrates creating and installing a multi-signature intent on an account.
-See ``examples/install_multisig_intent.py``.
+See `install_multisig_intent.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/install_multisig_intent.py>`.
 
 .. code-block:: python
 
@@ -220,16 +195,18 @@ See ``examples/install_multisig_intent.py``.
     from saline_sdk.account import Account
     from saline_sdk.transaction.bindings import (
         NonEmpty, Transaction, SetIntent, Any,
-        Signature, Send, Token, Restriction, Relation, Lit
+        Signature, Send, Token
     )
     from saline_sdk.transaction.tx import prepareSimpleTx
     from saline_sdk.rpc.client import Client
 
+    TEST_MNEMONIC = "excuse ozone east canoe duck tortoise dentist approve bid wagon area funny"
     RPC_URL = "https://node0.try-saline.com"
 
     async def create_and_install_multisig_intent():
-        # Use Account.create() for temporary accounts in examples
-        root = Account.create()
+        print("=== Creating a Multisig Intent using Operator Syntax ===\n")
+
+        root = Account.from_mnemonic(TEST_MNEMONIC)
 
         # Create 3 signers for the multisig
         signer1 = root.create_subaccount(label="signer1")
@@ -239,17 +216,21 @@ See ``examples/install_multisig_intent.py``.
         # Create a multisig wallet subaccount that will have the intent
         multisig_wallet = root.create_subaccount(label="multisig_wallet")
 
+        print("Multisig Participants:")
+        print(f"Signer 1: {signer1.public_key[:10]}...{signer1.public_key[-8:]}")
+        print(f"Signer 2: {signer2.public_key[:10]}...{signer2.public_key[-8:]}")
+        print(f"Signer 3: {signer3.public_key[:10]}...{signer3.public_key[-8:]}")
+        print(f"Multisig Wallet: {multisig_wallet.public_key[:10]}...{multisig_wallet.public_key[-8:]}")
+
         # Define the multisig intent
-        # Requires either:
-        # 1. The transaction only sends <= 1 BTC
-        # 2. The transaction has at least 2 of 3 signatures
+        # This creates an intent that requires either:
+        # 1. The transaction only sends <= 1 BTC (small transaction limit), OR
+        # 2. The transaction has at least 2 of 3 signatures from the signers
 
-        small_tx_restriction = Restriction(
-            Send(Token["BTC"]),
-            Relation.LE,
-            Lit(1)
-        )
+        # First part: restriction for small amounts (<=1 BTC)
+        small_tx_restriction = Send(Token.BTC) <= 1
 
+        # Second part: 2-of-3 multisignature requirement
         signatures = [
             Signature(signer1.public_key),
             Signature(signer2.public_key),
@@ -257,31 +238,46 @@ See ``examples/install_multisig_intent.py``.
         ]
         multisig_requirement = Any(2, signatures)
 
-        # Combine with OR logic
+        # Combine the two conditions with OR (using the Any operator with threshold 1)
         multisig_intent = Any(1, [small_tx_restriction, multisig_requirement])
 
-        # Create and submit SetIntent transaction
+        # Create a SetIntent instruction to install the intent on the multisig wallet
         set_intent_instruction = SetIntent(multisig_wallet.public_key, multisig_intent)
+
+        print("\nCreating SetIntent transaction to install the multisig intent")
+
         tx = Transaction(instructions=NonEmpty.from_list([set_intent_instruction]))
 
-        client = Client(http_url=RPC_URL)
-        try:
-            status = await client.get_status()
-            print(f"Connected to node: {status['node_info']['moniker']} @ {status['node_info']['network']} (Block: {status['sync_info']['latest_block_height']})")
-        except Exception as e:
-            print(f"ERROR: Could not connect to RPC @ {RPC_URL}. ({e})")
-            return
+        signed_tx = prepareSimpleTx(multisig_wallet, tx)
 
-        print("Submitting SetIntent transaction...")
+        print("\nMultisig Intent Structure:")
+        print(json.dumps(SetIntent.to_json(set_intent_instruction), indent=2))
+
+        rpc = Client(http_url=RPC_URL)
         try:
-            signed_tx = prepareSimpleTx(multisig_wallet, tx)
-            result = await client.tx_commit(signed_tx)
-            print(f"SetIntent Result: {json.dumps(result, indent=2)}")
+            print("\nSubmitting to network...")
+            result = await rpc.tx_commit(signed_tx)
+            print(f"Intent installation result: {json.dumps(result, indent=2)}")
+
+            if result.get("error") is None:
+                print("\nMultisig intent successfully installed!")
+                print(f"The account {multisig_wallet.public_key[:10]}...{multisig_wallet.public_key[-8:]} now has a multisig intent.")
+                print("This intent allows:")
+                print("1. Small transactions (<=1 BTC) without multiple signatures")
+                print("2. Any transaction with at least 2-of-3 signatures from the designated signers")
+            else:
+                print(f"\nError installing intent: {result.get('error')}")
         except Exception as e:
-            print(f"ERROR: SetIntent failed: {e}")
+            print(f"Transaction submission failed: {str(e)}")
+
+        return multisig_wallet
+
+    async def main():
+        await create_and_install_multisig_intent()
 
     if __name__ == "__main__":
-        asyncio.run(create_and_install_multisig_intent())
+        asyncio.run(main())
+
 
 
 
@@ -290,7 +286,7 @@ Restrictive Intent
 
 This simplified example demonstrates how to create a restrictive intent that only allows receiving SALT tokens
 from a specific trusted sender address. This creates a highly restricted wallet for secure custody. This pattern is useful for security-sensitive wallets or accounts that need tight control over incoming transfers.
-See ``examples/restrictive_intent.py``.
+See `install_restriction_intent.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/install_restriction_intent.py>`.
 
 .. code-block:: python
 
@@ -387,8 +383,11 @@ See ``examples/restrictive_intent.py``.
     if __name__ == "__main__":
         asyncio.run(main())
 
-Console output as parsed and prettified by helpers in ``saline-sdk.transaction.tx``
+
+Console output as parsed and prettified by helpers in ``saline-sdk.transaction.tx``:
+
 .. code-block:: console
+
     > python examples/install_restriction_intent.py
 
     85065d52efa38d0234796712342de02285cd4e75db7ad8cf505e982ef17c6bd020ab5af40051b97afc31df9517893e94
@@ -430,7 +429,7 @@ Console output as parsed and prettified by helpers in ``saline-sdk.transaction.t
 Querying Intents
 ============
 
-The ``query.py`` example demonstrates how to fetch and parse intents from the blockchain:
+The `query.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/query.py>` example demonstrates how to fetch and parse intents from the blockchain:
 
 .. code-block:: python
 
@@ -526,7 +525,7 @@ The ``query.py`` example demonstrates how to fetch and parse intents from the bl
 Intent Matching with Balance Verification
 ==========================
 
-The ``simple_matcher.py`` example illustrates a complete swap matching workflow:
+The `simple_matcher.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/simple_matcher.py>` example illustrates a complete swap matching workflow:
 
 1. Creating accounts with matching swap intents (Alice wants BTC, Bob wants USDC)
 2. Funding these accounts via the testnet faucet
