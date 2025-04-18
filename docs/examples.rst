@@ -3,7 +3,7 @@ Examples
 ========
 
 This section provides detailed examples of using the Saline SDK for various blockchain operations.
-These examples correspond to the scripts found in the ``examples/`` directory of the project.
+These examples correspond to the scripts found in the `examples <https://github.com/risingsealabs/saline-sdk/tree/main/examples>`_ directory of the project.
 
 Examples Defined in SRC
 =================
@@ -16,11 +16,12 @@ The SDK repository contains additional example files demonstrating more advanced
 4. `fulfill_faucet_intent.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/fulfill_faucet_intent.py>`_ – Interacting with the faucet intent directly to obtain tokens
 5. `install_restriction_intent.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/install_restriction_intent.py>`_ – Creating a wallet with specific transfer restrictions  
 6. `install_multisig_intent.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/install_multisig_intent.py>`_ – Setting up multi-signature requirements for an account  
+
 Basic Transaction
 ===============
 
 This example demonstrates how to create and submit a basic transfer transaction.
-See the `basic_transaction.py GitHub <https://github.com/risingsealabs/saline-sdk/blob/main/examples/basic_transaction.py>`_.
+See the `basic_transaction.py  <https://github.com/risingsealabs/saline-sdk/blob/main/examples/basic_transaction.py>`_.
 
 .. code-block:: python
 
@@ -69,7 +70,7 @@ Token Swap (Intent-Based)
 
 This example shows how to set up matching swap intents and have a matcher fulfill them.
 This is the recommended way to perform swaps in Saline.
-See ``examples/simple_matcher.py`` (this example is simplified from the script).
+See `simple_matcher.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/simple_matcher.py>`_ (this example is simplified from the script).
 
 .. code-block:: python
 
@@ -186,7 +187,7 @@ Multi-Signature Intent
 =========================
 
 This example demonstrates creating and installing a multi-signature intent on an account.
-See `install_multisig_intent.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/install_multisig_intent.py>`.
+See `install_multisig_intent.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/install_multisig_intent.py>`_.
 
 .. code-block:: python
 
@@ -286,7 +287,7 @@ Restrictive Intent
 
 This simplified example demonstrates how to create a restrictive intent that only allows receiving SALT tokens
 from a specific trusted sender address. This creates a highly restricted wallet for secure custody. This pattern is useful for security-sensitive wallets or accounts that need tight control over incoming transfers.
-See `install_restriction_intent.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/install_restriction_intent.py>`.
+See `install_restriction_intent.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/install_restriction_intent.py>`_.
 
 .. code-block:: python
 
@@ -429,7 +430,7 @@ Console output as parsed and prettified by helpers in ``saline-sdk.transaction.t
 Querying Intents
 ============
 
-The `query.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/query.py>` example demonstrates how to fetch and parse intents from the blockchain:
+The `query.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/query.py>`_ example demonstrates how to fetch and parse intents from the blockchain:
 
 .. code-block:: python
 
@@ -525,7 +526,7 @@ The `query.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/qu
 Intent Matching with Balance Verification
 ==========================
 
-The `simple_matcher.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/simple_matcher.py>` example illustrates a complete swap matching workflow:
+The `simple_matcher.py <https://github.com/risingsealabs/saline-sdk/blob/main/examples/simple_matcher.py>`_ example illustrates a complete swap matching workflow:
 
 1. Creating accounts with matching swap intents (Alice wants BTC, Bob wants USDC)
 2. Funding these accounts via the testnet faucet
