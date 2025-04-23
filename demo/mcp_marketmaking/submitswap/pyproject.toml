@@ -1,0 +1,17 @@
+[project]
+name = "submitswap"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "XXXXXX", email = "XXXXXX" }
+]
+requires-python = "==3.12.*"
+dependencies = ["mcp>=1.6.0","saline-sdk"]
+
+[project.scripts]
+submitswap = "submitswap:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
