@@ -11,33 +11,37 @@ from saline_sdk.account import Account
 from saline_sdk.rpc.client import Client
 from saline_sdk.transaction.bindings import TransferFunds, Transaction, NonEmpty
 from saline_sdk.transaction.tx import prepareSimpleTx, print_tx_errors
+from saline_sdk.rpc.testnet.faucet import top_up
 
 RPC_URL = "https://node1.try-saline.com"
 TEST_MNEMONIC = "exhaust wave soldier analyst angry portion mixed delay true disagree wood smart"
-RULE_ADDRESS = "b10bdfc35a171e58911cfb2e672818d163609663a3b324784b6cf5dc90d4b0140c97030a85be3afdb28cc75683e59c35"
+## Agent interacting with the rule_address address, so swap + whitelist and limit are creating on this address
+RULE_ADDRESS = "85065d52efa38d0234796712342de02285cd4e75db7ad8cf505e982ef17c6bd020ab5af40051b97afc31df9517893e94"
 
 def format_balances(balances: Optional[Dict[str, Any]]) -> str:
     if not balances:
         return "Unavailable or no balances"
     return ', '.join(f"{v} {k}" for k, v in balances.items()) or "(Empty)"
 
-async def create_and_submit_tx(rpc: Client, signer: Account, source: str, target: str, amount: Dict[str, int], label: str):
-    tx = Transaction(instructions=NonEmpty.from_list([
-        TransferFunds(source=source, target=target, funds=amount)
-    ]))
+async def submit_swap_tx(rpc: Client, signer: Account, sender_address: str, label: str):
+    # Create a manual swap transaction: send ETH, receive BTC
+    send_eth = TransferFunds(source=sender_address, target=RULE_ADDRESS, funds={"ETH": 11})
+    receive_btc = TransferFunds(source=RULE_ADDRESS, target=sender_address, funds={"BTC": 0.5})
+
+    tx = Transaction(instructions=NonEmpty.from_list([send_eth, receive_btc]))
     signed_tx = prepareSimpleTx(signer, tx)
 
-    print(f"Submitting transaction for {label}...")
+    print(f"\nSubmitting swap for {label}...")
     try:
         result = await rpc.tx_commit(signed_tx)
         print_tx_errors(result)
-        print(f"{label} tx:", json.dumps(result, indent=2))
+        print(f"{label} swap result:\n", json.dumps(result, indent=2))
 
-        updated_balance = await rpc.get_wallet_info_async(target)
+        updated_balance = await rpc.get_wallet_info_async(sender_address)
         print(f"{label} balance after:", format_balances(updated_balance.balances))
         return result
     except Exception as e:
-        print(f"ERROR: Transaction failed for {label}: {e}")
+        print(f"❌ ERROR: Swap failed for {label}: {e}")
 
 async def main():
     rpc = Client(http_url=RPC_URL)
@@ -49,14 +53,22 @@ async def main():
     print("Trusted Agent:", trusted.public_key)
     print("Untrusted Agent:", untrusted.public_key)
 
+    print("\nTopping up faucet for both agents...")
+    await top_up(trusted, rpc)
+    await top_up(untrusted, rpc)
+
+    # Show initial balances
     for label, account in [("Trusted Agent", trusted), ("Untrusted Agent", untrusted)]:
         info = await rpc.get_wallet_info_async(account.public_key)
         print(f"{label} balance before:", format_balances(info.balances))
 
-    result1 = await create_and_submit_tx(rpc, trusted, RULE_ADDRESS, trusted.public_key, {"ETH": 3}, "Trusted Agent")
-    result2 = await create_and_submit_tx(rpc, untrusted, RULE_ADDRESS, untrusted.public_key, {"ETH": 3}, "Untrusted Agent")
+    # Submit swap attempts
+    result_trusted = await submit_swap_tx(rpc, trusted, trusted.public_key, "Trusted Agent")
+    result_untrusted = await submit_swap_tx(rpc, untrusted, untrusted.public_key, "Untrusted Agent")
 
-    return result1, result2
+    return result_trusted, result_untrusted
+    # return result_untrusted
+    # return result_untrusted
 
 if __name__ == "__main__":
     asyncio.run(main())
