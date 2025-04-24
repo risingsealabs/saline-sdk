@@ -29,6 +29,12 @@ This documentation provides details on how to install, configure, and use the SD
 
 .. toctree::
    :maxdepth: 2
+   :caption: DEMO
+   
+   demo
+
+.. toctree::
+   :maxdepth: 2
    :caption: API
    
    api/saline
