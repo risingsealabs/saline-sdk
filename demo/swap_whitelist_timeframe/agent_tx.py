@@ -1,7 +1,7 @@
 # Create Swap + Counterparty + 1 time mandates 
 # This is the code to create agent to submit transaction to user asset address that try to swap. There are 2 agent, here one is 
 # the agent that is whitelisted in the user mandate the other aren't. Both trying to submit the same swap transaction.
-# [Alternative) You could also trying testing this with 1 trusted agent but submitted a different kind of transactions to the user address
+# [Alternative) You could also trying testing this with 1 trusted agent but submitted different kind of transactions to the user address
 
 import asyncio
 import json
