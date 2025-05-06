@@ -15,7 +15,7 @@ on:
         description: 'Path in destination repo to place the docs'
         required: true
         default: 'docs/reference/'
-ejobs:
+jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
