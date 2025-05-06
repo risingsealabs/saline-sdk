@@ -1,0 +1,54 @@
+name: Generate and Push Documentation
+
+on:
+  workflow_dispatch:
+    inputs:
+      destination_org:
+        description: 'Destination GitHub organization'
+        required: true
+        default: 'risingsealabs'
+      destination_repo:
+        description: 'Destination repository name'
+        required: true
+        default: 'saline_docs_2'
+      destination_path:
+        description: 'Path in destination repo to place the docs'
+        required: true
+        default: 'docs/reference/'
+ejobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Repository
+        uses: actions/checkout@v3
+
+      - name: Set Up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install Dependencies
+        run: poetry install --no-interaction --no-root
+
+      - name: Generate Documentation
+        run: poetry run pydoc-markdown
+
+      - name: Clone Destination Repository
+        env:
+          TOKEN: ${{ secrets.DOCS_PUSH_PAT }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git clone https://$TOKEN@github.com/${{ github.event.inputs.destination_org }}/${{ github.event.inputs.destination_repo }}.git destination-repo
+          cp saline_sdk.md destination-repo/${{ github.event.inputs.destination_path }}
+          cd destination-repo
+          git add ${{ github.event.inputs.destination_path }}saline_sdk.md
+          git commit -m "Update API documentation"
+          git push origin main

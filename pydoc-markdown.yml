@@ -1,0 +1,17 @@
+loaders:
+  - type: python
+    search_path: ["."]
+    packages: ["saline_sdk"]
+
+renderer:
+  type: markdown
+  filename: "saline_sdk.md"
+  render_toc: false
+  render_module_header: true
+  use_fixed_header_levels: true
+  header_level_by_type:
+    Module: 2
+    Class: 3
+    Function: 4
+    Method: 4
+    Variable: 4
