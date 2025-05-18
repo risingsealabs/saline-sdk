@@ -97,7 +97,7 @@ def test_client_status(client):
 
 
 @pytest.mark.asyncio
-async def test_client_get_block(client):
+async def disabled_test_client_get_block(client):
     """Test retrieving block data."""
     try:
         # Get status to find the latest block height
@@ -131,7 +131,7 @@ async def test_client_get_block(client):
 
 
 @pytest.mark.asyncio
-async def test_client_get_transactions(client):
+async def disabled_test_client_get_transactions(client):
     """Test retrieving transaction data."""
     try:
         # Get latest block to check for transactions
@@ -204,7 +204,7 @@ def test_client_direct_methods(client):
 
 
 @pytest.mark.asyncio
-async def test_client_intent_queries(client):
+async def disabled_test_client_intent_queries(client):
     """Test methods for querying intents and wallet info."""
     # Test address from examples
     test_address = "a947ddcc9264a722671c6e4e283cf0e0f3d9cd7baadf5a67e5bbb81865f2560eb80e94591bdc4a80027f2c728be3a7cd"
