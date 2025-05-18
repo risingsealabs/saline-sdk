@@ -84,8 +84,6 @@ def test_bindings_module_has_required_classes():
         "Relation",
         "Transaction",
         "Signed",
-        "Instruction",
-        "TransferFunds"
     ]
 
     for class_name in required_classes:

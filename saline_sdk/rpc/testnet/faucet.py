@@ -10,7 +10,7 @@ import asyncio
 from typing import Dict, Optional, Any, List
 
 from saline_sdk.transaction.bindings import (
-    NonEmpty, Transaction, TransferFunds,
+    NonEmpty, Transaction,
     Restriction, Send, Receive, Lit, Relation
 )
 from saline_sdk.transaction.tx import prepareSimpleTx
@@ -113,15 +113,7 @@ async def top_up(
     else:
         funds = DEFAULT_TOKEN_AMOUNTS
 
-    # Create a transfer instruction
-    instruction = TransferFunds(
-        source=FAUCET_ADDRESS,
-        target=account_address,
-        funds=funds
-    )
-
-
-    tx = Transaction(instructions=NonEmpty.from_list([instruction]))
+    tx = Transaction(funds = {FAUCET_ADDRESS: { account_address : funds }}, burn={}, intents={}, mint={})
     signed_tx = prepareSimpleTx(account, tx)
 
 

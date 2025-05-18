@@ -58,17 +58,18 @@ async def create_and_install_multisig_intent():
     # Combine the two conditions with OR (using the Any operator with threshold 1)
     multisig_intent = Any(1, [small_tx_restriction, multisig_requirement])
 
-    # Create a SetIntent instruction to install the intent on the multisig wallet
-    set_intent_instruction = SetIntent(multisig_wallet.public_key, multisig_intent)
+    # Create a SetIntent to install the intent on the multisig wallet
+    action = SetIntent(multisig_intent)
+    intents = {multisig_wallet.public_key: action}
 
-    print("\nCreating SetIntent transaction to install the multisig intent")
+    print("\nCreating transaction to install the multisig intent")
 
-    tx = Transaction(instructions=NonEmpty.from_list([set_intent_instruction]))
+    tx = Transaction(funds={}, burn={}, intents=intents, mint={})
 
     signed_tx = prepareSimpleTx(multisig_wallet, tx)
 
     print("\nMultisig Intent Structure:")
-    print(json.dumps(SetIntent.to_json(set_intent_instruction), indent=2))
+    print(json.dumps(SetIntent.to_json(action), indent=2))
 
     rpc = Client(http_url=RPC_URL)
     try:

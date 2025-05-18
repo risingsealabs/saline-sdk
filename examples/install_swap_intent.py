@@ -29,13 +29,13 @@ async def create_swap_intent():
     receive_token = "BTC"
     receive_amount = 1
 
-
     # Create swap intent using the operator syntax
     intent = Send(Token[send_token]) * send_amount <= Receive(Token[receive_token]) * receive_amount
 
-    # Create the SetIntent instruction and transaction
-    set_intent = SetIntent(alice.public_key, intent)
-    tx = Transaction(instructions=NonEmpty.from_list([set_intent]))
+    # Create the SetIntent and transaction
+    action = SetIntent(intent)
+    intents = {alice.public_key: action}
+    tx = Transaction(funds={}, burn={}, intents=intents, mint={})
     encoded_tx = prepareSimpleTx(alice, tx)
 
 
@@ -50,7 +50,7 @@ async def create_swap_intent():
 
         # Display the intent structure
         print("\nSwap intent structure:")
-        print(json.dumps(SetIntent.to_json(set_intent), indent=2))
+        print(json.dumps(SetIntent.to_json(action), indent=2))
 
     except Exception as e:
         print(f"Transaction failed: {str(e)}")

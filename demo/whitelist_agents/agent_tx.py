@@ -8,7 +8,7 @@ from typing import Dict, Optional, Any
 
 from saline_sdk.account import Account
 from saline_sdk.rpc.client import Client
-from saline_sdk.transaction.bindings import TransferFunds, Transaction, NonEmpty
+from saline_sdk.transaction.bindings import Transaction, NonEmpty
 from saline_sdk.transaction.tx import prepareSimpleTx, print_tx_errors
 
 RPC_URL = "https://node1.try-saline.com"
@@ -21,9 +21,8 @@ def format_balances(balances: Optional[Dict[str, Any]]) -> str:
     return ', '.join(f"{v} {k}" for k, v in balances.items()) or "(Empty)"
 
 async def create_and_submit_tx(rpc: Client, signer: Account, source: str, target: str, amount: Dict[str, int], label: str):
-    tx = Transaction(instructions=NonEmpty.from_list([
-        TransferFunds(source=source, target=target, funds=amount)
-    ]))
+    funds = {source: {target: amount }}
+    tx = Transaction(funds=funds, burn={}, intents={}, mint={})
     signed_tx = prepareSimpleTx(signer, tx)
 
     print(f"Submitting transaction for {label}...")

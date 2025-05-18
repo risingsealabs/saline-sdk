@@ -11,8 +11,9 @@ import asyncio
 from typing import Dict, List, Tuple, Optional, Any, TypedDict
 
 from saline_sdk.account import Account
+from saline_sdk.transaction.instructions import swap
 from saline_sdk.transaction.bindings import (
-    NonEmpty, Transaction, SetIntent, TransferFunds,
+    NonEmpty, Transaction, SetIntent,
     Send, Receive, Token, Restriction, Relation, All, Any, Lit, Intent
 )
 from saline_sdk.transaction.tx import prepareSimpleTx
@@ -74,8 +75,8 @@ async def create_accounts_with_swap_intents(client: Client, root_account: Accoun
             Receive(Token[config["want_token"]]), Relation.EQ, Lit(config["want_amount"])
         )
         swap_intent = All([send_restriction, receive_restriction])
-        set_intent_instruction = SetIntent(account.public_key, swap_intent)
-        tx = Transaction(instructions=NonEmpty.from_list([set_intent_instruction]))
+        intents = {account.public_key: SetIntent(swap_intent)}
+        tx = Transaction(funds={}, burn={}, intents=intents, mint={})
         signed_tx = prepareSimpleTx(account, tx)
         try:
             intent_result = await client.tx_commit(signed_tx)
@@ -255,9 +256,16 @@ async def fulfill_swap_pair(client: Client, swap_pair: Tuple[SwapDetails, SwapDe
     print(f"    {addr2_short}: {format_balances(info2_before.balances)}")
 
     # Prepare Swap Transaction
-    instruction1 = TransferFunds(source=addr1, target=addr2, funds={swap1["give_token"]: swap1["give_amount"]})
-    instruction2 = TransferFunds(source=addr2, target=addr1, funds={swap2["give_token"]: swap2["give_amount"]})
-    tx = Transaction(instructions=NonEmpty.from_list([instruction1, instruction2]))
+    funds = swap(
+        sender = addr1,
+        recipient = addr2,
+        give_token = swap1["give_token"],
+        give_amount = swap1["give_amount"],
+        take_token = swap2["give_token"],
+        take_amount = swap2["give_amount"]
+    )
+
+    tx = Transaction(funds=funds, burn={}, intents={}, mint={})
     signed_tx = prepareSimpleTx(matcher_account, tx)
 
     # Submit Swap Transaction

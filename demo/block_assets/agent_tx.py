@@ -1,4 +1,4 @@
-# Block assets 
+# Block assets
 # This is the code to create agent to submit transaction to user asset address
 
 import asyncio
@@ -6,8 +6,9 @@ import json
 from saline_sdk.account import Account
 from typing import Dict, List, Tuple, Optional, Any, TypedDict
 from saline_sdk.rpc.client import Client
-from saline_sdk.transaction.bindings import Counterparty, Lit, NonEmpty, Receive, SetIntent, Token, Transaction, TransferFunds
+from saline_sdk.transaction.bindings import Counterparty, Lit, NonEmpty, Receive, SetIntent, Token, Transaction
 from saline_sdk.transaction.bindings import NonEmpty, Transaction
+from saline_sdk.transaction.instructions import transfer
 from saline_sdk.transaction.tx import prepareSimpleTx, print_tx_errors
 
 RPC_URL = "https://node1.try-saline.com"
@@ -48,15 +49,14 @@ async def main():
     print("Agent balance after:",format_balances(account_balance1.balances))
 
     # Create a transaction from agent to RULE_ADDRESS (with rules)
-    transfer_instruction = TransferFunds(
-        source=RULE_ADDRESS,
-        target=sender.public_key,
-        funds={"BTC": 3}
+    funds = transfer(
+        sender=RULE_ADDRESS,
+        recipient=sender.public_key,
+        token="BTC",
+        amount=3
     )
 
-    tx = Transaction(
-        instructions=NonEmpty.from_list([transfer_instruction]),
-    )
+    tx = Transaction(funds=funds, burn={}, intents={}, mint={})
     signed_tx = prepareSimpleTx(sender, tx)
 
 
@@ -75,5 +75,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-

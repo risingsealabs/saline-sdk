@@ -1,8 +1,8 @@
-# Create Swap + Counterparty + 1 time mandates 
+# Create Swap + Counterparty + 1 time mandates
 # This is the code using SDK to installSwap + Counterparty + 1 time to the asset address , alternative method to the UI
 
 from saline_sdk.account import Account
-from saline_sdk.transaction.bindings import Counterparty, Lit, NonEmpty, Receive, SetIntent, Token, Transaction, TransferFunds, Intent, Balance
+from saline_sdk.transaction.bindings import Counterparty, Lit, NonEmpty, Receive, SetIntent, Token, Transaction, Intent, Balance
 from saline_sdk.transaction.tx import prepareSimpleTx, tx_is_accepted, print_tx_errors
 from saline_sdk.rpc.client import Client
 import asyncio
@@ -23,8 +23,9 @@ async def main():
 
     # Whitelist trusted_address
     restricted_intent = Counterparty(trusted_address)
-    set_intent = SetIntent(wallet.public_key, restricted_intent)
-    tx = Transaction(instructions=NonEmpty.from_list([set_intent]))
+    intents = {wallet.public_key: SetIntent(restricted_intent)}
+    tx = Transaction(funds={}, burn={}, intents=intents, mint={})
+
     tx_result = await rpc.tx_commit(prepareSimpleTx(wallet, tx))
     print(f"Set intent result: {'ACCEPTED' if tx_is_accepted(tx_result) else 'REJECTED: ' + print_tx_errors(tx_result)}")
 

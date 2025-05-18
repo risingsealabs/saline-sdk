@@ -75,17 +75,15 @@ def test_basic_transfer(client, test_accounts):
     sender = test_accounts["sender"]
     receiver = test_accounts["receiver"]
 
-    # Create a simple transfer transaction
-    transfer_instruction = transfer(
+    # Create a simple transfer
+    funds = transfer(
         sender=sender.public_key,
         recipient=receiver.public_key,
         token="USDC",
         amount=20
     )
 
-    tx = Transaction(
-        instructions=NonEmpty.from_list([transfer_instruction]),
-    )
+    tx = Transaction(funds=funds, burn={}, intents={}, mint={})
 
     # Submit the transaction
     try:
@@ -117,8 +115,8 @@ def test_set_intent(client, test_accounts):
     intent = Send(Token[send_token]) * send_amount <= Receive(Token[receive_token]) * receive_amount
 
     # Create the SetIntent instruction and transaction
-    set_intent = SetIntent(alice.public_key, intent)
-    tx = Transaction(instructions=NonEmpty.from_list([set_intent]))
+    intents = {alice.public_key: SetIntent(intent)}
+    tx = Transaction(funds={}, burn={}, intents=intents, mint={})
 
     # Submit the transaction
     try:
@@ -142,14 +140,14 @@ def test_multisig_transaction(client, test_accounts):
     recipient = test_accounts["multisig_receiver"]
 
     # Use a different token that might not have existing constraints
-    transfer_instruction = transfer(
+    funds = transfer(
         sender=signer1.public_key,
         recipient=recipient.public_key,
         token="ETH",
         amount=1
     )
 
-    tx = Transaction(instructions=NonEmpty.from_list([transfer_instruction]))
+    tx = Transaction(funds=funds, burn={}, intents={}, mint={})
 
     nonce = str(uuid.uuid4())
 

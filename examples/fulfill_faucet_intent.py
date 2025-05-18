@@ -12,7 +12,7 @@ For a more advanced approach dynamically deriving the faucet bounds, see saline-
 import asyncio
 from saline_sdk.account import Account
 from saline_sdk.transaction.bindings import (
-    NonEmpty, Transaction, TransferFunds, Intent
+    NonEmpty, Transaction, Intent
 )
 from saline_sdk.transaction.tx import prepareSimpleTx, tx_is_accepted, print_tx_errors
 from saline_sdk.rpc.client import Client
@@ -25,21 +25,16 @@ RPC_URL = "https://node0.try-saline.com"
 async def get_tokens_from_faucet(client, account):
     """Request tokens from the faucet using hardcoded amounts"""
 
-    # Create a transfer instruction for standard faucet amounts
-    instruction = TransferFunds(
-        source=FAUCET_ADDRESS,  # Faucet address
-        target=account.public_key,  # Recipient
-        funds={
-            "BTC": 1,
-            "ETH": 10,
-            "USDC": 1000,
-            "USDT": 1000,
-            "SALT": 1000
-        }
-    )
+    # Create a transfer for standard faucet amounts
+    funds = {FAUCET_ADDRESS: {account.public_key: {
+        "BTC": 1,
+        "ETH": 10,
+        "USDC": 1000,
+        "USDT": 1000,
+        "SALT": 1000
+    }}}
 
-    # Create transaction with the instruction
-    tx = Transaction(instructions=NonEmpty.from_list([instruction]))
+    tx = Transaction(funds=funds, burn={}, intents={}, mint={})
     signed_tx = prepareSimpleTx(account, tx)
 
     result = await client.tx_commit(signed_tx)

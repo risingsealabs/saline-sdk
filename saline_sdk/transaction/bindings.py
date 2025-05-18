@@ -36,6 +36,9 @@ def dumps(x):
 def loads(x):
   return json.loads(x)
 
+def unsafeDictToListDeep(x):
+  return [(k, unsafeDictToListDeep(v) if dict == type(v) else v) for (k,v) in list(x.items())]
+
 
 class Relation(Enum):
   EQ = 0
@@ -191,7 +194,7 @@ class AnyW(Witness):
     if (not isinstance(x,AnyW)):
       raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(AnyW)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
-    d["children"] = list(x.children.items())
+    d["children"] = [(k,Witness.to_json(v)) for (k,v) in x.children.items()]
     return d
 
 
@@ -626,232 +629,111 @@ class Signature(Intent):
     return d
 
 
-# BridgeInstruction types
+# IntentAction types
 
-class BridgeInstruction():
+class IntentAction():
   def __init__(self):
     pass
 
   @staticmethod
   def from_json(d):
     match d["tag"]:
-      case "Burn":
-        return Burn.from_json(d)
-      case "Mint":
-        return Mint.from_json(d)
-
-  @staticmethod
-  def to_json(x: 'BridgeInstruction'):
-    if (not isinstance(x,BridgeInstruction)):
-      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(BridgeInstruction)+ '\n' + '  ' + 'Got: ' + str(type(x)))
-    match x:
-      case Burn():
-        d = {"tag" : "Burn"} | Burn.to_json(x)
-        return dict(sorted(d.items()))
-      case Mint():
-        d = {"tag" : "Mint"} | Mint.to_json(x)
-        return dict(sorted(d.items()))
-
-
-class Burn(BridgeInstruction):
-  def __init__(self, token: Token, amount: float64):
-    super().__init__()
-    self.token = token
-    self.amount = amount
-
-  @staticmethod
-  def from_json(d):
-    return Burn(Token.from_json(d["token"]), d["amount"])
-
-  @staticmethod
-  def to_json(x: 'Burn'):
-    if (not isinstance(x,Burn)):
-      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Burn)+ '\n' + '  ' + 'Got: ' + str(type(x)))
-    d = dict()
-    d["token"] = Token.to_json(x.token)
-    d["amount"] = x.amount
-    return d
-
-
-class Mint(BridgeInstruction):
-  def __init__(self, prover: G2Element, token: Token, amount: float64):
-    super().__init__()
-    self.prover = prover
-    self.token = token
-    self.amount = amount
-
-  @staticmethod
-  def from_json(d):
-    return Mint(d["prover"], Token.from_json(d["token"]), d["amount"])
-
-  @staticmethod
-  def to_json(x: 'Mint'):
-    if (not isinstance(x,Mint)):
-      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Mint)+ '\n' + '  ' + 'Got: ' + str(type(x)))
-    d = dict()
-    d["prover"] = x.prover
-    d["token"] = Token.to_json(x.token)
-    d["amount"] = x.amount
-    return d
-
-
-# Instruction types
-
-class Instruction():
-  def __init__(self):
-    pass
-
-  @staticmethod
-  def from_json(d):
-    match d["tag"]:
-      case "TransferFunds":
-        return TransferFunds.from_json(d)
-      case "OrIntent":
-        return OrIntent.from_json(d)
       case "SetIntent":
         return SetIntent.from_json(d)
+      case "OrIntent":
+        return OrIntent.from_json(d)
       case "Delete":
         return Delete.from_json(d)
-      case "Bridge":
-        return Bridge.from_json(d)
 
   @staticmethod
-  def to_json(x: 'Instruction'):
-    if (not isinstance(x,Instruction)):
-      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Instruction)+ '\n' + '  ' + 'Got: ' + str(type(x)))
+  def to_json(x: 'IntentAction'):
+    if (not isinstance(x,IntentAction)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(IntentAction)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     match x:
-      case TransferFunds():
-        d = {"tag" : "TransferFunds"} | TransferFunds.to_json(x)
+      case SetIntent():
+        d = {"tag" : "SetIntent"} | SetIntent.to_json(x)
         return dict(sorted(d.items()))
       case OrIntent():
         d = {"tag" : "OrIntent"} | OrIntent.to_json(x)
         return dict(sorted(d.items()))
-      case SetIntent():
-        d = {"tag" : "SetIntent"} | SetIntent.to_json(x)
-        return dict(sorted(d.items()))
       case Delete():
         d = {"tag" : "Delete"} | Delete.to_json(x)
         return dict(sorted(d.items()))
-      case Bridge():
-        d = {"tag" : "Bridge"} | Bridge.to_json(x)
-        return dict(sorted(d.items()))
 
 
-class TransferFunds(Instruction):
-  def __init__(self, source: G2Element, target: G2Element, funds: dict[Token, float64]):
+class SetIntent(IntentAction):
+  def __init__(self, intent: Intent):
     super().__init__()
-    self.source = source
-    self.target = target
-    self.funds = funds
-
-  @staticmethod
-  def from_json(d):
-    return TransferFunds(d["source"], d["target"], dict(d["funds"]))
-
-  @staticmethod
-  def to_json(x: 'TransferFunds'):
-    if (not isinstance(x,TransferFunds)):
-      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(TransferFunds)+ '\n' + '  ' + 'Got: ' + str(type(x)))
-    d = dict()
-    d["source"] = x.source
-    d["target"] = x.target
-    d["funds"] = list(x.funds.items())
-    return d
-
-
-class OrIntent(Instruction):
-  def __init__(self, host: G2Element, intent: Intent):
-    super().__init__()
-    self.host = host
     self.intent = intent
 
   @staticmethod
   def from_json(d):
-    return OrIntent(d["host"], Intent.from_json(d["intent"]))
-
-  @staticmethod
-  def to_json(x: 'OrIntent'):
-    if (not isinstance(x,OrIntent)):
-      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(OrIntent)+ '\n' + '  ' + 'Got: ' + str(type(x)))
-    d = dict()
-    d["host"] = x.host
-    d["intent"] = Intent.to_json(x.intent)
-    return d
-
-
-class SetIntent(Instruction):
-  def __init__(self, host: G2Element, intent: Intent):
-    super().__init__()
-    self.host = host
-    self.intent = intent
-
-  @staticmethod
-  def from_json(d):
-    return SetIntent(d["host"], Intent.from_json(d["intent"]))
+    return SetIntent(Intent.from_json(d["intent"]))
 
   @staticmethod
   def to_json(x: 'SetIntent'):
     if (not isinstance(x,SetIntent)):
       raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(SetIntent)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
-    d["host"] = x.host
     d["intent"] = Intent.to_json(x.intent)
     return d
 
 
-class Delete(Instruction):
-  def __init__(self, host: G2Element):
+class OrIntent(IntentAction):
+  def __init__(self, intent: Intent):
     super().__init__()
-    self.host = host
+    self.intent = intent
 
   @staticmethod
   def from_json(d):
-    return Delete(d["host"])
+    return OrIntent(Intent.from_json(d["intent"]))
+
+  @staticmethod
+  def to_json(x: 'OrIntent'):
+    if (not isinstance(x,OrIntent)):
+      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(OrIntent)+ '\n' + '  ' + 'Got: ' + str(type(x)))
+    d = dict()
+    d["intent"] = Intent.to_json(x.intent)
+    return d
+
+
+class Delete(IntentAction):
+  def __init__(self):
+    pass
+
+  @staticmethod
+  def from_json(d):
+    return Delete()
 
   @staticmethod
   def to_json(x: 'Delete'):
     if (not isinstance(x,Delete)):
       raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Delete)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
-    d["host"] = x.host
-    return d
-
-
-class Bridge(Instruction):
-  def __init__(self, bridgedAccount: G2Element, instruction: BridgeInstruction):
-    super().__init__()
-    self.bridgedAccount = bridgedAccount
-    self.instruction = instruction
-
-  @staticmethod
-  def from_json(d):
-    return Bridge(d["bridgedAccount"], BridgeInstruction.from_json(d["instruction"]))
-
-  @staticmethod
-  def to_json(x: 'Bridge'):
-    if (not isinstance(x,Bridge)):
-      raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Bridge)+ '\n' + '  ' + 'Got: ' + str(type(x)))
-    d = dict()
-    d["bridgedAccount"] = x.bridgedAccount
-    d["instruction"] = BridgeInstruction.to_json(x.instruction)
     return d
 
 
 class Transaction():
-  def __init__(self, instructions: NonEmpty[Instruction]):
+  def __init__(self, burn: dict[G2Element, dict[Token, float64]], funds: dict[G2Element, dict[G2Element, dict[Token, float64]]], intents: dict[G2Element, IntentAction], mint: dict[G2Element, dict[Token, float64]]):
     super().__init__()
-    self.instructions = instructions
+    self.burn = burn
+    self.funds = funds
+    self.intents = intents
+    self.mint = mint
 
   @staticmethod
   def from_json(d):
-    return Transaction(NonEmpty.from_list(list(map(Instruction.from_json, (d["instructions"])))))
+    return Transaction(dict(d["burn"]), dict(d["funds"]), dict(d["intents"]), dict(d["mint"]))
 
   @staticmethod
   def to_json(x: 'Transaction'):
     if (not isinstance(x,Transaction)):
       raise TypeError (''+ '\n' + '  ' + 'Expected: ' + str(Transaction)+ '\n' + '  ' + 'Got: ' + str(type(x)))
     d = dict()
-    d["instructions"] = list(map(Instruction.to_json, x.instructions.list))
+    d["burn"] = unsafeDictToListDeep(x.burn)
+    d["funds"] = unsafeDictToListDeep(x.funds)
+    d["intents"] = [(k,IntentAction.to_json(v)) for (k,v) in x.intents.items()]
+    d["mint"] = unsafeDictToListDeep(x.mint)
     return d
 
 

@@ -1,5 +1,6 @@
 from saline_sdk.account import Account
-from saline_sdk.transaction.bindings import Counterparty, Lit, NonEmpty, Receive, SetIntent, Token, Transaction, TransferFunds, Intent
+from saline_sdk.transaction.bindings import Counterparty, Lit, NonEmpty, Receive, SetIntent, Token, Transaction, Intent
+from saline_sdk.transaction.instructions import transfer
 from saline_sdk.transaction.tx import prepareSimpleTx, tx_is_accepted, print_tx_errors
 from saline_sdk.rpc.client import Client
 import asyncio
@@ -26,8 +27,8 @@ async def main():
 
     # Set restrictive intent
     restricted_intent = Counterparty(trusted.public_key) & (Receive(Token.SALT) >= 10)
-    set_intent = SetIntent(wallet.public_key, restricted_intent)
-    tx = Transaction(instructions=NonEmpty.from_list([set_intent]))
+    intents = {wallet.public_key: SetIntent(restricted_intent)}
+    tx = Transaction(funds={}, burn={}, intents=intents, mint={})
     tx_result = await rpc.tx_commit(prepareSimpleTx(wallet, tx))
     print(f"Set intent result: {'ACCEPTED' if tx_is_accepted(tx_result) else 'REJECTED: ' + str(tx_result)}")
 
@@ -39,12 +40,13 @@ async def main():
 
     # Test 1: SALT from trusted sender (should pass)
     print("\n=== Test 1: SALT from trusted sender (should pass) ===")
-    transfer1 = TransferFunds(
-        source=trusted.public_key,
-        target=wallet.public_key,
-        funds={"SALT": 11}
+    funds1 = transfer(
+        sender=trusted.public_key,
+        recipient=wallet.public_key,
+        token="SALT",
+        amount=11
     )
-    tx1 = Transaction(instructions=NonEmpty.from_list([transfer1]))
+    tx1 = Transaction(funds=funds1, burn={}, intents={}, mint={})
     result1 = await rpc.tx_commit(prepareSimpleTx(trusted, tx1))
     print(f"Transaction result: {'ACCEPTED' if tx_is_accepted(result1) else f'REJECTED: {print_tx_errors(result1)}'}")
 
@@ -54,12 +56,13 @@ async def main():
 
     # Test 2: SALT from untrusted sender (should fail)
     print("\n=== Test 2: SALT from untrusted sender (should fail) ===")
-    transfer2 = TransferFunds(
-        source=untrusted.public_key,
-        target=wallet.public_key,
-        funds={"SALT": 10}
+    funds2 = transfer(
+        sender=untrusted.public_key,
+        recipient=wallet.public_key,
+        token="SALT",
+        amount=10
     )
-    tx2 = Transaction(instructions=NonEmpty.from_list([transfer2]))
+    tx2 = Transaction(funds=funds2, burn={}, intents={}, mint={})
     result2 = await rpc.tx_commit(prepareSimpleTx(untrusted, tx2))
     print(f"Transaction result: {'ACCEPTED' if tx_is_accepted(result2) else f'REJECTED: {print_tx_errors(result2)}'}")
 
@@ -69,12 +72,13 @@ async def main():
 
     # Test 3: USDC from trusted sender (should fail)
     print("\n=== Test 3: USDC from trusted sender (should fail) ===")
-    transfer3 = TransferFunds(
-        source=trusted.public_key,
-        target=wallet.public_key,
-        funds={"USDC": 10}
+    funds3 = transfer(
+        sender=trusted.public_key,
+        recipient=wallet.public_key,
+        token="USDC",
+        amount=10
     )
-    tx3 = Transaction(instructions=NonEmpty.from_list([transfer3]))
+    tx3 = Transaction(funds=funds3, burn={}, intents={}, mint={})
     result3 = await rpc.tx_commit(prepareSimpleTx(trusted, tx3))
     print(f"Transaction result: {'ACCEPTED' if tx_is_accepted(result3) else f'REJECTED: {print_tx_errors(result3)}'}")
 

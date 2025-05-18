@@ -17,16 +17,14 @@ async def main():
     sender = account.create_subaccount(label="sender")
     receiver = account.create_subaccount(label="receiver")
 
-    transfer_instruction = transfer(
+    funds = transfer(
         sender=sender.public_key,
         recipient=receiver.public_key,
         token="USDC",
         amount=20
     )
 
-    tx = Transaction(
-        instructions=NonEmpty.from_list([transfer_instruction]),
-    )
+    tx = Transaction(funds=funds, burn={}, intents={}, mint={})
 
     rpc = Client(http_url=RPC_URL)
     # Submit transaction and wait for validation

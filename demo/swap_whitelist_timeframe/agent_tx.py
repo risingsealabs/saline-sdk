@@ -1,5 +1,5 @@
-# Create Swap + Counterparty + 1 time mandates 
-# This is the code to create agent to submit transaction to user asset address that try to swap. There are 2 agent, here one is 
+# Create Swap + Counterparty + 1 time mandates
+# This is the code to create agent to submit transaction to user asset address that try to swap. There are 2 agent, here one is
 # the agent that is whitelisted in the user mandate the other aren't. Both trying to submit the same swap transaction.
 # [Alternative) You could also trying testing this with 1 trusted agent but submitted different kind of transactions to the user address
 
@@ -9,7 +9,8 @@ from typing import Dict, Optional, Any
 
 from saline_sdk.account import Account
 from saline_sdk.rpc.client import Client
-from saline_sdk.transaction.bindings import TransferFunds, Transaction, NonEmpty
+from saline_sdk.transaction.bindings import Transaction, NonEmpty
+from saline_sdk.transaction.instructions import swap
 from saline_sdk.transaction.tx import prepareSimpleTx, print_tx_errors
 from saline_sdk.rpc.testnet.faucet import top_up
 
@@ -25,10 +26,16 @@ def format_balances(balances: Optional[Dict[str, Any]]) -> str:
 
 async def submit_swap_tx(rpc: Client, signer: Account, sender_address: str, label: str):
     # Create a manual swap transaction: send ETH, receive BTC
-    send_eth = TransferFunds(source=sender_address, target=RULE_ADDRESS, funds={"ETH": 11})
-    receive_btc = TransferFunds(source=RULE_ADDRESS, target=sender_address, funds={"BTC": 0.5})
+    funds = swap(
+        sender = sender_address,
+        recipient = RULE_ADDRESS,
+        give_token = "ETH",
+        give_amount = 11,
+        take_token = "BTC",
+        take_amount = 0.5
+    )
 
-    tx = Transaction(instructions=NonEmpty.from_list([send_eth, receive_btc]))
+    tx = Transaction(funds=funds, burn={}, intents={}, mint={})
     signed_tx = prepareSimpleTx(signer, tx)
 
     print(f"\nSubmitting swap for {label}...")
@@ -66,7 +73,7 @@ async def main():
     result_trusted = await submit_swap_tx(rpc, trusted, trusted.public_key, "Trusted Agent")
     # result_untrusted = await submit_swap_tx(rpc, untrusted, untrusted.public_key, "Untrusted Agent")
 
-    return result_trusted 
+    return result_trusted
     # return result_untrusted
 
 if __name__ == "__main__":
